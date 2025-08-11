@@ -4,10 +4,22 @@ import 'package:nearnest/screens/register/admin_register.dart';
 import 'package:nearnest/screens/register/customer_register.dart';
 import 'package:nearnest/screens/register/service_provider_register.dart';
 import 'package:nearnest/screens/register/shop_register.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() => runApp(MyApp());
+void main() async {
+  // Ensure that Flutter widgets are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -22,7 +34,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/admin_registration': (context) => const AdminRegisterPage(),
         '/customer_registration': (context) => const CustomerRegisterPage(),
-        '/service_provider_registration': (context) => const ServiceProviderRegisterPage(),
+        '/service_provider_registration': (context) =>
+            const ServiceProviderRegisterPage(),
         '/shop_registration': (context) => const ShopsRegisterPage(),
       },
     );
