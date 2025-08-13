@@ -1,25 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-// Import the new dashboard pages
-import 'package:nearnest/screens/dashboards/admin_dashboard.dart';
-import 'package:nearnest/screens/dashboards/service_provider_dashboard.dart';
-import 'package:nearnest/screens/dashboards/shop_dashboard.dart';
-import 'package:nearnest/screens/dashboards/user_dashboard.dart';
+void main() => runApp(const MyApp());
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Customer Login',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        fontFamily: 'SF Pro Display',
+      ),
+      home: const CustomerLoginPage(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
 }
 
-class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+class CustomerLoginPage extends StatefulWidget {
+  const CustomerLoginPage({super.key});
 
-  late final List<Map<String, dynamic>> users;
+  @override
+  _CustomerLoginPageState createState() => _CustomerLoginPageState();
+}
 
-  int selectedIndex = 1;
+class _CustomerLoginPageState extends State<CustomerLoginPage> with TickerProviderStateMixin {
+  final Map<String, dynamic> customerUser = {
+    'username': 'customer@example.com',
+    'password': 'customer123',
+    'role': 'Customer',
+    'color': const Color(0xFF065F46),
+    'gradient': [
+      const Color(0xFF34D399),
+      const Color(0xFF10B981),
+      const Color(0xFF059669),
+      const Color(0xFF047857),
+    ],
+    'icon': Icons.people,
+    'title': 'Welcome Back',
+    'subtitle': 'Browse and purchase services',
+    'inputLabel': 'User Email',
+    'inputHint': 'Enter your email address',
+    'registrationRoute': '/customer_registration',
+    'signupText': 'Create Account'
+  };
+
   String email = '';
   String password = '';
   String error = '';
@@ -34,97 +61,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _backgroundController = AnimationController(
-      duration: Duration(seconds: 15),
+      duration: const Duration(seconds: 15),
       vsync: this,
     )..repeat();
-
+    
     _backgroundAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _backgroundController, curve: Curves.linear),
     );
-
-    // Initialize the users list here where 'this' is available
-    users = [
-      {
-        'username': 'admin@example.com',
-        'password': 'admin123',
-        'role': 'Admin',
-        'color': const Color(0xFF991B1B),
-        'gradient': [
-          Color(0xFFF87171),
-          Color(0xFFEF4444),
-          Color(0xFFDC2626),
-          Color(0xFFB91C1C),
-        ],
-        'icon': Icons.admin_panel_settings,
-        'title': 'Admin Portal',
-        'subtitle': 'Manage system and users',
-        'inputLabel': 'Admin ID',
-        'inputHint': 'Enter your admin ID',
-        'registrationRoute': '/admin_registration',
-        'signupText': 'Register as Admin',
-        'loginHandler': (String email, String password, BuildContext context) async => _handleAdminLogin(email, password, context),
-      },
-      {
-        'username': 'customer@example.com',
-        'password': 'customer123',
-        'role': 'Customer',
-        'color': Color(0xFF065F46),
-        'gradient': [
-          Color(0xFF34D399),
-          Color(0xFF10B981),
-          Color(0xFF059669),
-          Color(0xFF047857),
-        ],
-        'icon': Icons.people,
-        'title': 'Welcome Back',
-        'subtitle': 'Browse and purchase services',
-        'inputLabel': 'User Email',
-        'inputHint': 'Enter your email address',
-        'registrationRoute': '/customer_registration',
-        'signupText': 'Create Account',
-        'loginHandler': (String email, String password, BuildContext context) async => _handleCustomerLogin(email, password, context),
-      },
-      {
-        'username': 'service@example.com',
-        'password': 'service123',
-        'role': 'Service Provider',
-        'color': const Color(0xFF0C4A6E),
-        'gradient': [
-          Color(0xFF38BDF8),
-          Color(0xFF0EA5E9),
-          Color(0xFF0284C7),
-          Color(0xFF0369A1),
-        ],
-        'icon': Icons.assignment_ind,
-        'title': 'Service Provider',
-        'subtitle': 'Manage your services',
-        'inputLabel': 'Provider ID',
-        'inputHint': 'Enter your service provider ID',
-        'registrationRoute': '/service_provider_registration',
-        'signupText': 'Register as Provider',
-        'loginHandler': (String email, String password, BuildContext context) async => _handleServiceProviderLogin(email, password, context),
-      },
-      {
-        'username': 'shop@example.com',
-        'password': 'shop123',
-        'role': 'Shops',
-        'color': const Color(0xFF854D0E),
-        'gradient': [
-          Color(0xFFFACC15),
-          Color(0xFFEAB308),
-          Color(0xFFCA8A04),
-          Color(0xFFB45309),
-        ],
-        'icon': Icons.storefront,
-        'title': 'Shop Management',
-        'subtitle': 'Manage your store',
-        'inputLabel': 'Shop ID',
-        'inputHint': 'Enter your shop ID',
-        'registrationRoute': '/shop_registration',
-        'signupText': 'Register Shop',
-        'loginHandler': (String email, String password, BuildContext context) async => _handleShopLogin(email, password, context),
-      },
-    ];
   }
 
   @override
@@ -135,13 +78,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = users[selectedIndex];
+    final currentUser = customerUser;
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenHeight < 700;
-
+    
     return Scaffold(
-      backgroundColor: Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: AnimatedBuilder(
         animation: _backgroundAnimation,
         builder: (context, child) {
@@ -152,8 +95,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 radius: 2.5,
                 colors: [
                   currentUser['color'].withOpacity(0.12),
-                  Color(0xFFF1F5F9).withOpacity(0.8),
-                  Color(0xFFFFFFFF),
+                  const Color(0xFFF1F5F9).withOpacity(0.8),
+                  const Color(0xFFFFFFFF),
                 ],
               ),
             ),
@@ -176,13 +119,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                         BoxShadow(
                           color: Colors.black.withOpacity(0.08),
                           blurRadius: 32,
-                          offset: Offset(0, 16),
+                          offset: const Offset(0, 16),
                           spreadRadius: -4,
                         ),
                         BoxShadow(
                           color: currentUser['color'].withOpacity(0.15),
                           blurRadius: 24,
-                          offset: Offset(0, 8),
+                          offset: const Offset(0, 8),
                           spreadRadius: -6,
                         ),
                       ],
@@ -190,7 +133,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Header Section - More compact
+                        // Header Section
                         Container(
                           width: double.infinity,
                           padding: EdgeInsets.symmetric(
@@ -202,9 +145,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: currentUser['gradient'],
-                              stops: [0.0, 0.3, 0.7, 1.0],
+                              stops: const [0.0, 0.3, 0.7, 1.0],
                             ),
-                            borderRadius: BorderRadius.only(
+                            borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(24),
                               topRight: Radius.circular(24),
                             ),
@@ -212,7 +155,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               BoxShadow(
                                 color: currentUser['color'].withOpacity(0.4),
                                 blurRadius: 20,
-                                offset: Offset(0, 10),
+                                offset: const Offset(0, 10),
                                 spreadRadius: -4,
                               ),
                             ],
@@ -232,7 +175,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.15),
                                       blurRadius: 16,
-                                      offset: Offset(0, 8),
+                                      offset: const Offset(0, 8),
                                     ),
                                   ],
                                 ),
@@ -253,14 +196,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   shadows: [
                                     Shadow(
                                       color: Colors.black.withOpacity(0.3),
-                                      offset: Offset(0, 2),
+                                      offset: const Offset(0, 2),
                                       blurRadius: 8,
                                     ),
                                   ],
                                 ),
                                 textAlign: TextAlign.center,
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text(
                                 currentUser['subtitle'],
                                 style: TextStyle(
@@ -271,7 +214,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   shadows: [
                                     Shadow(
                                       color: Colors.black.withOpacity(0.2),
-                                      offset: Offset(0, 1),
+                                      offset: const Offset(0, 1),
                                       blurRadius: 4,
                                     ),
                                   ],
@@ -281,105 +224,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             ],
                           ),
                         ),
-
-                        // Role Selection Icons - Horizontal small icons
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: isSmallScreen ? 12 : 16,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: users.asMap().entries.map((entry) {
-                              int index = entry.key;
-                              Map<String, dynamic> user = entry.value;
-                              bool isSelected = selectedIndex == index;
-
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    selectedIndex = index;
-                                    email = '';
-                                    password = '';
-                                    error = '';
-                                  });
-                                },
-                                child: AnimatedContainer(
-                                  duration: Duration(milliseconds: 350),
-                                  curve: Curves.easeInOutCubic,
-                                  padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? user['color'].withOpacity(0.15)
-                                        : Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? user['color'].withOpacity(0.6)
-                                          : Color(0xFFE2E8F0),
-                                      width: isSelected ? 2.0 : 1.5,
-                                    ),
-                                    boxShadow: isSelected
-                                        ? [
-                                            BoxShadow(
-                                              color: user['color'].withOpacity(0.3),
-                                              blurRadius: 10,
-                                              offset: Offset(0, 4),
-                                              spreadRadius: -2,
-                                            ),
-                                          ]
-                                        : [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.08),
-                                              blurRadius: 6,
-                                              offset: Offset(0, 2),
-                                            ),
-                                          ],
-                                  ),
-                                  child: Container(
-                                    width: isSmallScreen ? 36 : 40,
-                                    height: isSmallScreen ? 36 : 40,
-                                    decoration: isSelected
-                                        ? BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                user['gradient'][0],
-                                                user['gradient'][2],
-                                              ],
-                                            ),
-                                            borderRadius: BorderRadius.circular(10),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: user['color'].withOpacity(0.4),
-                                                blurRadius: 8,
-                                                offset: Offset(0, 3),
-                                              ),
-                                            ],
-                                          )
-                                        : BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(10),
-                                            border: Border.all(
-                                              color: Color(0xFFE2E8F0),
-                                              width: 1,
-                                            ),
-                                          ),
-                                    child: Icon(
-                                      user['icon'],
-                                      color: isSelected
-                                          ? Colors.white
-                                          : Color(0xFF64748B),
-                                      size: isSmallScreen ? 18 : 20,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-
+                        
                         // Login Form
                         Container(
                           padding: EdgeInsets.symmetric(
@@ -392,32 +237,32 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               // Dynamic Email/ID Field
                               Text(
                                 currentUser['inputLabel'],
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF1E293B),
                                   letterSpacing: 0.1,
                                 ),
                               ),
-                              SizedBox(height: 10),
+                              const SizedBox(height: 10),
                               Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: Color(0xFFE2E8F0),
+                                    color: const Color(0xFFE2E8F0),
                                     width: 1.5,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.06),
                                       blurRadius: 8,
-                                      offset: Offset(0, 3),
+                                      offset: const Offset(0, 3),
                                     ),
                                   ],
                                 ),
                                 child: TextField(
-                                  key: ValueKey('email_$selectedIndex'),
+                                  key: const ValueKey('email_customer'),
                                   decoration: InputDecoration(
                                     hintText: currentUser['inputHint'],
                                     border: InputBorder.none,
@@ -425,13 +270,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       horizontal: 18,
                                       vertical: isSmallScreen ? 16 : 18,
                                     ),
-                                    hintStyle: TextStyle(
+                                    hintStyle: const TextStyle(
                                       color: Color(0xFF94A3B8),
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 15,
                                     color: Color(0xFF0F172A),
                                     fontWeight: FontWeight.w600,
@@ -439,11 +284,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   onChanged: (value) => email = value,
                                 ),
                               ),
-
+                              
                               SizedBox(height: isSmallScreen ? 20 : 24),
-
+                              
                               // Password Field
-                              Text(
+                              const Text(
                                 'Password',
                                 style: TextStyle(
                                   fontSize: 15,
@@ -452,25 +297,25 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   letterSpacing: 0.1,
                                 ),
                               ),
-                              SizedBox(height: 10),
+                              const SizedBox(height: 10),
                               Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: Color(0xFFE2E8F0),
+                                    color: const Color(0xFFE2E8F0),
                                     width: 1.5,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.06),
                                       blurRadius: 8,
-                                      offset: Offset(0, 3),
+                                      offset: const Offset(0, 3),
                                     ),
                                   ],
                                 ),
                                 child: TextField(
-                                  key: ValueKey('password_$selectedIndex'),
+                                  key: const ValueKey('password_customer'),
                                   obscureText: !showPassword,
                                   decoration: InputDecoration(
                                     hintText: 'Enter your password',
@@ -482,21 +327,21 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     suffixIcon: GestureDetector(
                                       onTap: () => setState(() => showPassword = !showPassword),
                                       child: Container(
-                                        padding: EdgeInsets.all(12),
+                                        padding: const EdgeInsets.all(12),
                                         child: Icon(
                                           showPassword ? Icons.visibility : Icons.visibility_off,
-                                          color: Color(0xFF94A3B8),
+                                          color: const Color(0xFF94A3B8),
                                           size: 20,
                                         ),
                                       ),
                                     ),
-                                    hintStyle: TextStyle(
+                                    hintStyle: const TextStyle(
                                       color: Color(0xFF94A3B8),
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 15,
                                     color: Color(0xFF0F172A),
                                     fontWeight: FontWeight.w600,
@@ -504,9 +349,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   onChanged: (value) => password = value,
                                 ),
                               ),
-
+                              
                               SizedBox(height: isSmallScreen ? 20 : 24),
-
+                              
                               // Remember Me & Forgot Password
                               Row(
                                 children: [
@@ -525,8 +370,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                           ),
                                         ),
                                       ),
-                                      SizedBox(width: 10),
-                                      Text(
+                                      const SizedBox(width: 10),
+                                      const Text(
                                         'Remember me',
                                         style: TextStyle(
                                           color: Color(0xFF475569),
@@ -536,7 +381,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       ),
                                     ],
                                   ),
-                                  Spacer(),
+                                  const Spacer(),
                                   GestureDetector(
                                     onTap: () {
                                       _handleForgotPassword(currentUser);
@@ -554,9 +399,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   ),
                                 ],
                               ),
-
+                              
                               SizedBox(height: isSmallScreen ? 28 : 32),
-
+                              
                               // Login Button
                               Container(
                                 width: double.infinity,
@@ -566,25 +411,25 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                     colors: currentUser['gradient'],
-                                    stops: [0.0, 0.3, 0.7, 1.0],
+                                    stops: const [0.0, 0.3, 0.7, 1.0],
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
                                       color: currentUser['color'].withOpacity(0.5),
                                       blurRadius: 20,
-                                      offset: Offset(0, 10),
+                                      offset: const Offset(0, 10),
                                       spreadRadius: -3,
                                     ),
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.15),
                                       blurRadius: 10,
-                                      offset: Offset(0, 5),
+                                      offset: const Offset(0, 5),
                                     ),
                                   ],
                                 ),
                                 child: ElevatedButton(
-                                  onPressed: isLoading ? null : () => _handleLogin(currentUser['loginHandler']),
+                                  onPressed: isLoading ? null : _handleLogin,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
@@ -593,7 +438,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   child: isLoading
-                                      ? SizedBox(
+                                      ? const SizedBox(
                                           height: 24,
                                           width: 24,
                                           child: CircularProgressIndicator(
@@ -605,19 +450,19 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                           mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
                                             Container(
-                                              padding: EdgeInsets.all(3),
+                                              padding: const EdgeInsets.all(3),
                                               decoration: BoxDecoration(
                                                 color: Colors.white.withOpacity(0.25),
                                                 borderRadius: BorderRadius.circular(6),
                                               ),
-                                              child: Icon(
+                                              child: const Icon(
                                                 Icons.login,
                                                 color: Colors.white,
                                                 size: 18,
                                               ),
                                             ),
-                                            SizedBox(width: 12),
-                                            Text(
+                                            const SizedBox(width: 12),
+                                            const Text(
                                               'Sign In',
                                               style: TextStyle(
                                                 color: Colors.white,
@@ -626,7 +471,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                                 letterSpacing: 0.5,
                                                 shadows: [
                                                   Shadow(
-                                                    color: Colors.black.withOpacity(0.3),
+                                                    color: Color.fromRGBO(0, 0, 0, 0.3),
                                                     offset: Offset(0, 2),
                                                     blurRadius: 4,
                                                   ),
@@ -637,85 +482,82 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                         ),
                                 ),
                               ),
-
+                              
                               SizedBox(height: isSmallScreen ? 24 : 28),
-
+                              
                               // Sign Up Link - Now Clickable and Role-specific
                               Center(
-                                child: GestureDetector(
-                                  onTap: () => _navigateToRegistration(currentUser),
-                                  child: RichText(
-                                    text: TextSpan(
-                                      text: "Don't have an account? ",
-                                      style: TextStyle(
-                                        color: Color(0xFF64748B),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      children: [
-                                        TextSpan(
-                                          text: currentUser['signupText'],
-                                          style: TextStyle(
-                                            color: currentUser['color'],
-                                            fontWeight: FontWeight.w800,
-                                            decoration: TextDecoration.underline,
-                                            decorationColor: currentUser['color'].withOpacity(0.6),
-                                            decorationThickness: 2,
-                                          ),
-                                        ),
-                                      ],
+                                child: RichText(
+                                  text: TextSpan(
+                                    text: "Don't have an account? ",
+                                    style: const TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
                                     ),
+                                    children: [
+                                      TextSpan(
+                                        text: currentUser['signupText'],
+                                        style: TextStyle(
+                                          color: currentUser['color'],
+                                          fontWeight: FontWeight.w800,
+                                          decoration: TextDecoration.underline,
+                                          decorationColor: currentUser['color'].withOpacity(0.6),
+                                          decorationThickness: 2,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-
+                              
                               // Error Message
                               if (error.isNotEmpty) ...[
                                 SizedBox(height: isSmallScreen ? 18 : 20),
                                 Container(
                                   width: double.infinity,
-                                  padding: EdgeInsets.all(16),
+                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Color(0xFFFEF2F2),
+                                    color: const Color(0xFFFEF2F2),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: Color(0xFFFECACA),
+                                      color: const Color(0xFFFECACA),
                                       width: 1.5,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.red.withOpacity(0.15),
                                         blurRadius: 8,
-                                        offset: Offset(0, 3),
+                                        offset: const Offset(0, 3),
                                       ),
                                     ],
                                   ),
                                   child: Row(
                                     children: [
                                       Container(
-                                        padding: EdgeInsets.all(6),
+                                        padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
-                                          color: Color(0xFFFECACA),
+                                          color: const Color(0xFFFECACA),
                                           borderRadius: BorderRadius.circular(6),
                                           boxShadow: [
                                             BoxShadow(
                                               color: Colors.red.withOpacity(0.3),
                                               blurRadius: 4,
-                                              offset: Offset(0, 2),
+                                              offset: const Offset(0, 2),
                                             ),
                                           ],
                                         ),
-                                        child: Icon(
+                                        child: const Icon(
                                           Icons.error_outline,
                                           color: Color(0xFFDC2626),
                                           size: 16,
                                         ),
                                       ),
-                                      SizedBox(width: 12),
+                                      const SizedBox(width: 12),
                                       Expanded(
                                         child: Text(
                                           error,
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             color: Color(0xFFDC2626),
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
@@ -727,7 +569,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   ),
                                 ),
                               ],
-
+                              
                               SizedBox(height: isSmallScreen ? 16 : 20),
                             ],
                           ),
@@ -744,10 +586,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     );
   }
 
-  void _navigateToRegistration(Map<String, dynamic> user) {
-    Navigator.pushNamed(context, user['registrationRoute']);
-  }
-
   void _handleForgotPassword(Map<String, dynamic> user) {
     showDialog(
       context: context,
@@ -756,15 +594,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         title: Row(
           children: [
             Icon(Icons.help_outline, color: user['color']),
-            SizedBox(width: 10),
-            Text('Forgot Password'),
+            const SizedBox(width: 10),
+            const Text('Forgot Password'),
           ],
         ),
         content: Text('Password recovery for ${user['role']} accounts will be sent to your registered contact information.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: user['color']),
@@ -772,243 +610,144 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Password recovery instructions sent!'),
+                  content: const Text('Password recovery instructions sent!'),
                   backgroundColor: user['color'],
                 ),
               );
             },
-            child: Text('Send Recovery', style: TextStyle(color: Colors.white)),
+            child: const Text('Send Recovery', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _handleLogin(Function(String, String, BuildContext) loginHandler) async {
+  Future<void> _handleLogin() async {
     setState(() => isLoading = true);
-    final user = users[selectedIndex];
+    await Future.delayed(const Duration(milliseconds: 1500));
 
-    if (email.isEmpty || password.isEmpty) {
-      setState(() {
-        isLoading = false;
-        error = 'Please enter both your ${user['inputLabel'].toLowerCase()} and password.';
-      });
-      return;
-    }
+    final user = customerUser;
+    
+    setState(() => isLoading = false);
 
-    try {
-      await loginHandler(email, password, context);
-    } on FirebaseAuthException catch (e) {
-      _handleFirebaseError(e);
-    }
-  }
-
-  // Individual Login Handlers for Firebase Authentication
-  Future<void> _handleAdminLogin(String email, String password, BuildContext context) async {
-    try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-      _showSuccessDialog(users[selectedIndex]);
-    } on FirebaseAuthException catch (e) {
-      _handleFirebaseError(e);
-    }
-  }
-
-  Future<void> _handleCustomerLogin(String email, String password, BuildContext context) async {
-    try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-      _showSuccessDialog(users[selectedIndex]);
-    } on FirebaseAuthException catch (e) {
-      _handleFirebaseError(e);
-    }
-  }
-
-  Future<void> _handleServiceProviderLogin(String email, String password, BuildContext context) async {
-    try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-      _showSuccessDialog(users[selectedIndex]);
-    } on FirebaseAuthException catch (e) {
-      _handleFirebaseError(e);
-    }
-  }
-
-  Future<void> _handleShopLogin(String email, String password, BuildContext context) async {
-    try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-      _showSuccessDialog(users[selectedIndex]);
-    } on FirebaseAuthException catch (e) {
-      _handleFirebaseError(e);
-    }
-  }
-
-  void _handleFirebaseError(FirebaseAuthException e) {
-    String errorMessage;
-    if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-      errorMessage = 'Invalid email or password.';
-    } else if (e.code == 'invalid-email') {
-      errorMessage = 'The email address is not valid.';
-    } else {
-      errorMessage = 'An unknown error occurred. Please try again.';
-    }
-    setState(() {
-      isLoading = false;
-      error = errorMessage;
-    });
-  }
-
-  // New method to navigate to the correct dashboard based on user role
-  void _navigateToDashboard(Map<String, dynamic> user) {
-    setState(() {
-      isLoading = false;
-      error = '';
-    });
-
-    Widget dashboard;
-    switch (user['role']) {
-      case 'Admin':
-        dashboard = AdminDashboard();
-        break;
-      case 'Customer':
-        dashboard = UserDashboard();
-        break;
-      case 'Service Provider':
-        dashboard = ServiceProviderDashboard();
-        break;
-      case 'Shops':
-        dashboard = ShopDashboard();
-        break;
-      default:
-        // Handle a default or unrecognized role
-        dashboard = Scaffold(body: Center(child: Text('Unknown user role.')));
-    }
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => dashboard),
-    );
-  }
-
-  void _showSuccessDialog(Map<String, dynamic> user) {
-    setState(() {
-      isLoading = false;
-      error = '';
-    });
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 24,
-                offset: Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: user['color'].withOpacity(0.1),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: user['color'].withOpacity(0.3),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
+    if (email == user['username'] && password == user['password']) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: user['color'].withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
                       color: user['color'].withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: Offset(0, 6),
+                      width: 2,
                     ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  color: user['color'],
-                  size: 32,
-                ),
-              ),
-              SizedBox(height: 20),
-              Text(
-                'Welcome ${user['role']}!',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1E293B),
-                  letterSpacing: -0.4,
-                ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'You have successfully logged in to your account',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Color(0xFF64748B),
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 24),
-              Container(
-                width: double.infinity,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: user['gradient'],
+                    boxShadow: [
+                      BoxShadow(
+                        color: user['color'].withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: user['color'].withOpacity(0.4),
-                      blurRadius: 12,
-                      offset: Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _navigateToDashboard(user);
-                  },
-                  child: Text(
-                    'CONTINUE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      letterSpacing: 1.0,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withOpacity(0.3),
-                          offset: Offset(0, 2),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
+                  child: Icon(
+                    Icons.check_circle,
+                    color: user['color'],
+                    size: 32,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+                Text(
+                  'Welcome ${user['role']}!',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E293B),
+                    letterSpacing: -0.4,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'You have successfully logged in to your account',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: user['gradient'],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: user['color'].withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'CONTINUE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        letterSpacing: 1.0,
+                        shadows: [
+                          Shadow(
+                            color: Color.fromRGBO(0, 0, 0, 0.3),
+                            offset: Offset(0, 2),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } else {
+      setState(() => error = 'Invalid credentials. Please check your ${customerUser['inputLabel'].toLowerCase()} and password.');
+    }
   }
 }
