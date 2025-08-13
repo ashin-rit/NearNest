@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Import the new dashboard pages
 import 'package:nearnest/screens/dashboards/admin_dashboard.dart';
@@ -16,6 +17,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   late final List<Map<String, dynamic>> users;
 
@@ -62,7 +64,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         'inputHint': 'Enter your admin ID',
         'registrationRoute': '/admin_registration',
         'signupText': 'Register as Admin',
-        'loginHandler': (String email, String password, BuildContext context) async => _handleAdminLogin(email, password, context),
+        'loginHandler': (String emailOrId, String password, BuildContext context) async => _handleAdminLogin(emailOrId, password, context),
+        'firestoreCollection': 'admins',
+        'useIdAuth': true,
       },
       {
         'username': 'customer@example.com',
@@ -83,6 +87,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         'registrationRoute': '/customer_registration',
         'signupText': 'Create Account',
         'loginHandler': (String email, String password, BuildContext context) async => _handleCustomerLogin(email, password, context),
+        'firestoreCollection': 'customers',
+        'useIdAuth': false,
       },
       {
         'username': 'service@example.com',
@@ -102,7 +108,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         'inputHint': 'Enter your service provider ID',
         'registrationRoute': '/service_provider_registration',
         'signupText': 'Register as Provider',
-        'loginHandler': (String email, String password, BuildContext context) async => _handleServiceProviderLogin(email, password, context),
+        'loginHandler': (String emailOrId, String password, BuildContext context) async => _handleServiceProviderLogin(emailOrId, password, context),
+        'firestoreCollection': 'service_providers',
+        'useIdAuth': true,
       },
       {
         'username': 'shop@example.com',
@@ -122,7 +130,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         'inputHint': 'Enter your shop ID',
         'registrationRoute': '/shop_registration',
         'signupText': 'Register Shop',
-        'loginHandler': (String email, String password, BuildContext context) async => _handleShopLogin(email, password, context),
+        'loginHandler': (String emailOrId, String password, BuildContext context) async => _handleShopLogin(emailOrId, password, context),
+        'firestoreCollection': 'shops',
+        'useIdAuth': true,
       },
     ];
   }
@@ -798,23 +808,113 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
     try {
       await loginHandler(email, password, context);
-    } on FirebaseAuthException catch (e) {
-      _handleFirebaseError(e);
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        error = e.toString();
+      });
     }
   }
 
-  // Individual Login Handlers for Firebase Authentication
-  Future<void> _handleAdminLogin(String email, String password, BuildContext context) async {
+  // Helper method to fetch email from Firestore using ID
+  Future<String?> _fetchEmailFromFirestore(String collection, String userIdInput) async {
     try {
+      QuerySnapshot querySnapshot;
+      
+      // Handle different ID field names and types for different collections
+      switch (collection) {
+        case 'shops':
+          // For shops, the ID is stored as a number field named 'id'
+          int? shopId = int.tryParse(userIdInput);
+          if (shopId == null) {
+            throw Exception('Invalid Shop ID format. Please enter a valid numeric ID.');
+          }
+          querySnapshot = await _firestore
+              .collection(collection)
+              .where('id', isEqualTo: shopId)
+              .limit(1)
+              .get();
+          break;
+        
+        case 'admins':
+
+          int? shopId = int.tryParse(userIdInput);
+          if (shopId == null) {
+            throw Exception('Invalid Shop ID format. Please enter a valid numeric ID.');
+          }
+          querySnapshot = await _firestore
+              .collection(collection)
+              .where('id', isEqualTo: shopId)
+              .limit(1)
+              .get();
+          break;
+        
+        case 'service_providers':
+        
+          int? shopId = int.tryParse(userIdInput);
+          if (shopId == null) {
+            throw Exception('Invalid Shop ID format. Please enter a valid numeric ID.');
+          }
+          querySnapshot = await _firestore
+              .collection(collection)
+              .where('id', isEqualTo: shopId)
+              .limit(1)
+              .get();
+          break;
+        
+        
+        default:
+          // Default case for other collections
+          querySnapshot = await _firestore
+              .collection(collection)
+              .where('id', isEqualTo: userIdInput)
+              .limit(1)
+              .get();
+      }
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final userData = querySnapshot.docs.first.data() as Map<String, dynamic>;
+        return userData['email'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching email from Firestore: $e');
+      return null;
+    }
+  }
+
+  // Individual Login Handlers
+  Future<void> _handleAdminLogin(String adminId, String password, BuildContext context) async {
+ try {
+      // Validate shop ID format (should be numeric)
+      if (int.tryParse(adminId) == null) {
+        throw Exception('Invalid Shop ID format. Please enter a valid numeric ID.');
+      }
+      
+      // Fetch email from Firestore using shop ID
+      String? email = await _fetchEmailFromFirestore('shops', adminId);
+      
+      if (email == null) {
+        throw Exception('Shop ID "$adminId" not found. Please check your ID and try again.');
+      }
+
+      // Authenticate with Firebase Auth using the fetched email
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       _showSuccessDialog(users[selectedIndex]);
     } on FirebaseAuthException catch (e) {
       _handleFirebaseError(e);
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        error = e.toString().replaceAll('Exception: ', '');
+      });
     }
   }
+
 
   Future<void> _handleCustomerLogin(String email, String password, BuildContext context) async {
     try {
+      // Direct email/password authentication for customers
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       _showSuccessDialog(users[selectedIndex]);
     } on FirebaseAuthException catch (e) {
@@ -822,40 +922,87 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _handleServiceProviderLogin(String email, String password, BuildContext context) async {
+  Future<void> _handleServiceProviderLogin(String providerId, String password, BuildContext context) async {
+ try {
+      // Validate shop ID format (should be numeric)
+      if (int.tryParse(providerId) == null) {
+        throw Exception('Invalid Shop ID format. Please enter a valid numeric ID.');
+      }
+      
+      // Fetch email from Firestore using shop ID
+      String? email = await _fetchEmailFromFirestore('shops', providerId);
+      
+      if (email == null) {
+        throw Exception('Shop ID "$providerId" not found. Please check your ID and try again.');
+      }
+
+      // Authenticate with Firebase Auth using the fetched email
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      _showSuccessDialog(users[selectedIndex]);
+    } on FirebaseAuthException catch (e) {
+      _handleFirebaseError(e);
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        error = e.toString().replaceAll('Exception: ', '');
+      });
+    }
+  }
+
+
+  Future<void> _handleShopLogin(String shopId, String password, BuildContext context) async {
     try {
+      // Validate shop ID format (should be numeric)
+      if (int.tryParse(shopId) == null) {
+        throw Exception('Invalid Shop ID format. Please enter a valid numeric ID.');
+      }
+      
+      // Fetch email from Firestore using shop ID
+      String? email = await _fetchEmailFromFirestore('shops', shopId);
+      
+      if (email == null) {
+        throw Exception('Shop ID "$shopId" not found. Please check your ID and try again.');
+      }
+
+      // Authenticate with Firebase Auth using the fetched email
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       _showSuccessDialog(users[selectedIndex]);
     } on FirebaseAuthException catch (e) {
       _handleFirebaseError(e);
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        error = e.toString().replaceAll('Exception: ', '');
+      });
     }
   }
 
-  Future<void> _handleShopLogin(String email, String password, BuildContext context) async {
-    try {
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
-      _showSuccessDialog(users[selectedIndex]);
-    } on FirebaseAuthException catch (e) {
-      _handleFirebaseError(e);
-    }
+void _handleFirebaseError(FirebaseAuthException e) {
+  String errorMessage;
+  if (e.code == 'wrong-password') {
+    errorMessage = 'Incorrect password. Please try again.';
+  } else if (e.code == 'user-not-found') {
+    errorMessage = 'No account found with this ID or email.';
+  } else if (e.code == 'invalid-email') {
+    errorMessage = 'The email address you entered is not valid.';
+  } else if (e.code == 'invalid-credential') {
+    errorMessage = 'Invalid login attempt. Please check your ID/email and password.';
+  } else if (e.code == 'user-disabled') {
+    errorMessage = 'This account has been disabled. Please contact support.';
+  } else if (e.code == 'too-many-requests') {
+    errorMessage = 'Too many failed attempts. Please try again later.';
+  } else if (e.code == 'network-request-failed') {
+    errorMessage = 'Network error. Please check your connection.';
+  } else {
+    errorMessage = 'An unknown error occurred. Please try again.';
   }
+  setState(() {
+    isLoading = false;
+    error = errorMessage;
+  });
+}
 
-  void _handleFirebaseError(FirebaseAuthException e) {
-    String errorMessage;
-    if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-      errorMessage = 'Invalid email or password.';
-    } else if (e.code == 'invalid-email') {
-      errorMessage = 'The email address is not valid.';
-    } else {
-      errorMessage = 'An unknown error occurred. Please try again.';
-    }
-    setState(() {
-      isLoading = false;
-      error = errorMessage;
-    });
-  }
-
-  // New method to navigate to the correct dashboard based on user role
+  // Method to navigate to the correct dashboard based on user role
   void _navigateToDashboard(Map<String, dynamic> user) {
     setState(() {
       isLoading = false;
@@ -878,7 +1025,18 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         break;
       default:
         // Handle a default or unrecognized role
-        dashboard = Scaffold(body: Center(child: Text('Unknown user role.')));
+        dashboard = Scaffold(
+          body: Center(
+            child: Text(
+              'Unknown user role.',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF64748B),
+              ),
+            ),
+          ),
+        );
     }
 
     Navigator.pushReplacement(
@@ -1011,4 +1169,47 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       ),
     );
   }
+
+  /* 
+   * COMMENTED OUT FOR FUTURE USE - DEFAULT EMAIL/PASSWORD AUTHENTICATION
+   * 
+   * This section contains the original authentication logic that can be
+   * used as fallback or for testing purposes.
+   * 
+  Future<void> _handleDefaultLogin(String email, String password, BuildContext context) async {
+    try {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      _showSuccessDialog(users[selectedIndex]);
+    } on FirebaseAuthException catch (e) {
+      _handleFirebaseError(e);
+    }
+  }
+
+  // Default credentials for testing (remove in production)
+  final Map<String, Map<String, String>> _defaultCredentials = {
+    'Admin': {
+      'email': 'admin@example.com',
+      'password': 'admin123',
+    },
+    'Customer': {
+      'email': 'customer@example.com',
+      'password': 'customer123',
+    },
+    'Service Provider': {
+      'email': 'service@example.com',
+      'password': 'service123',
+    },
+    'Shops': {
+      'email': 'shop@example.com',
+      'password': 'shop123',
+    },
+  };
+
+  Future<void> _handleFallbackLogin(String role) async {
+    final credentials = _defaultCredentials[role];
+    if (credentials != null) {
+      await _handleDefaultLogin(credentials['email']!, credentials['password']!, context);
+    }
+  }
+  */
 }
