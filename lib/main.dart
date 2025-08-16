@@ -30,13 +30,18 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'SF Pro Display',
       ),
+
       // Define routes here in the main MaterialApp
+      // lib/main.dart
+      // ... inside the MaterialApp widget
       routes: {
         '/admin_registration': (context) => const AdminRegisterPage(),
         '/customer_registration': (context) => const CustomerRegisterPage(),
         '/service_provider_registration': (context) =>
             const ServiceProviderRegisterPage(),
-        '/shop_registration': (context) => const ShopsRegisterPage(),
+        '/shops_registration': (context) => const ShopsRegisterPage(),
+        // NOTE: The route name for Shops is '/shops_registration',
+        // which is also a common place for a typo.
       },
     );
   }
