@@ -61,18 +61,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+      return const Center(
+        child: CircularProgressIndicator(),
       );
     }
 
     if (_userData == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text('User data not found.'),
-        ),
+      return const Center(
+        child: Text('User data not found.'),
       );
     }
 
@@ -83,75 +79,68 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final String address = data['address'] ?? 'N/A';
     final String role = data['role'] ?? 'N/A';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        backgroundColor: const Color(0xFF065F46),
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 20),
-              const CircleAvatar(
-                radius: 60,
-                backgroundColor: Colors.grey,
-                child: Icon(Icons.person, size: 80, color: Colors.white),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            const CircleAvatar(
+              radius: 60,
+              backgroundColor: Colors.grey,
+              child: Icon(Icons.person, size: 80, color: Colors.white),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
-              const SizedBox(height: 20),
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Role: $role',
+              style: const TextStyle(
+                fontSize: 16,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 30),
+            _buildInfoCard(
+              title: 'Email',
+              value: email,
+              icon: Icons.email,
+            ),
+            const SizedBox(height: 16),
+            _buildInfoCard(
+              title: 'Phone',
+              value: phone,
+              icon: Icons.phone,
+            ),
+            const SizedBox(height: 16),
+            _buildInfoCard(
+              title: 'Address',
+              value: address,
+              icon: Icons.location_on,
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton.icon(
+              onPressed: _handleLogout,
+              icon: const Icon(Icons.logout, color: Colors.white),
+              label: const Text('Log Out', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
                 ),
+                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Role: $role',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 30),
-              _buildInfoCard(
-                title: 'Email',
-                value: email,
-                icon: Icons.email,
-              ),
-              const SizedBox(height: 16),
-              _buildInfoCard(
-                title: 'Phone',
-                value: phone,
-                icon: Icons.phone,
-              ),
-              const SizedBox(height: 16),
-              _buildInfoCard(
-                title: 'Address',
-                value: address,
-                icon: Icons.location_on,
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton.icon(
-                onPressed: _handleLogout,
-                icon: const Icon(Icons.logout, color: Colors.white),
-                label: const Text('Log Out', style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -165,7 +154,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF065F46)),
+            Icon(icon, color: const Color(0xFF34D399)),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,

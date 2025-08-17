@@ -2,8 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:nearnest/services/auth_service.dart'; // Ensure you have this import
-import 'package:nearnest/screens/dashboards/shop_profile_edit_screen.dart';
+import 'package:nearnest/services/auth_service.dart';
+import 'package:nearnest/screens/dashboards/shop_profile_edit_screen.dart'; 
+import 'package:nearnest/screens/product_management_screen.dart'; 
+import 'package:nearnest/screens/login_page.dart'; 
 
 class ShopDashboard extends StatefulWidget {
   const ShopDashboard({super.key});
@@ -37,7 +39,6 @@ class _ShopDashboardState extends State<ShopDashboard> {
         setState(() {
           _isLoading = false;
         });
-        // Handle error, e.g., show a snackbar or an error message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load shop data.')),
         );
@@ -46,8 +47,14 @@ class _ShopDashboardState extends State<ShopDashboard> {
       setState(() {
         _isLoading = false;
       });
-      // Handle the case where the user is not logged in
     }
+  }
+
+  Future<void> _signOut(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
   }
 
   @override
@@ -56,7 +63,7 @@ class _ShopDashboardState extends State<ShopDashboard> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    if (_shopData == null) {
+    if (_shopData == null || !_shopData!.exists) {
       return const Scaffold(body: Center(child: Text('Shop data not found.')));
     }
 
@@ -66,15 +73,20 @@ class _ShopDashboardState extends State<ShopDashboard> {
     final String email = data['email'] ?? 'N/A';
     final String phone = data['phone'] ?? 'N/A';
     final String address = data['address'] ?? 'N/A';
-    final String description =
-        data['description'] ?? 'No description provided.';
+    final String description = data['description'] ?? 'No description provided.';
     final String category = data['category'] ?? 'N/A';
     final String business_hours = data['business_hours'] ?? 'N/A';
 
     return Scaffold(
       appBar: AppBar(
         title: Text('$name Dashboard'),
-        backgroundColor: const Color(0xFF854D0E), // Shop's primary color
+        backgroundColor: const Color(0xFFFACC15),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () => _signOut(context),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -126,38 +138,66 @@ class _ShopDashboardState extends State<ShopDashboard> {
             ),
             const SizedBox(height: 40),
             Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context)
-                      .push(
+              child: Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (context) => ShopProfileEditScreen(
+                                userId: _auth.currentUser!.uid,
+                                initialData:
+                                    _shopData!.data() as Map<String, dynamic>,
+                              ),
+                            ),
+                          )
+                          .then((_) {
+                            _fetchShopData();
+                          });
+                    },
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    label: const Text(
+                      'Edit Business Profile',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFACC15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => ShopProfileEditScreen(
-                            userId: _auth.currentUser!.uid,
-                            initialData:
-                                _shopData!.data() as Map<String, dynamic>,
-                          ),
+                          builder: (context) => const ProductManagementScreen(),
                         ),
-                      )
-                      .then((_) {
-                        // Refresh the data when returning from the edit screen
-                        _fetchShopData();
-                      });
-                },
-                icon: const Icon(Icons.edit, color: Colors.white),
-                label: const Text(
-                  'Edit Business Profile',
-                  style: TextStyle(color: Colors.white),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF854D0E),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
+                      );
+                    },
+                    icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
+                    label: const Text(
+                      'Manage Products',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEAB308),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
+                        vertical: 12,
+                      ),
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 25,
-                    vertical: 12,
-                  ),
-                ),
+                ],
               ),
             ),
           ],

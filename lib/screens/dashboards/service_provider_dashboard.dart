@@ -78,7 +78,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
     return Scaffold(
       appBar: AppBar(
         title: Text('$name Dashboard'),
-        backgroundColor: const Color(0xFF0C4A6E), // Service Provider's primary color
+        backgroundColor: const Color(0xFF38BDF8), // Service Provider's primary color
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -139,7 +139,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                 icon: const Icon(Icons.edit, color: Colors.white),
                 label: const Text('Edit Professional Profile', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0C4A6E),
+                  backgroundColor: const Color(0xFF38BDF8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),

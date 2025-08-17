@@ -96,7 +96,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Business Profile'),
-        backgroundColor: const Color(0xFF854D0E),
+        backgroundColor: const Color(0xFFFACC15),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -173,7 +173,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
                       icon: const Icon(Icons.save, color: Colors.white),
                       label: const Text('Save Changes', style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF854D0E),
+                        backgroundColor: const Color(0xFFFACC15),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),

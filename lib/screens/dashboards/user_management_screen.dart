@@ -62,7 +62,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage All Users'),
-        backgroundColor: const Color(0xFF991B1B),
+        backgroundColor: const Color(0xFFB91C1C),
         elevation: 0,
       ),
       body: Column(
@@ -97,7 +97,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   child: ChoiceChip(
                     label: Text(role),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF991B1B),
+                    selectedColor: const Color(0xFFB91C1C),
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : Colors.black87,
                     ),
@@ -214,13 +214,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   Color _getRoleColor(String role) {
     switch (role) {
       case 'Customer':
-        return const Color(0xFF065F46);
+        return const Color(0xFF34D399);
       case 'Shop':
-        return const Color(0xFF854D0E);
+        return const Color(0xFFFACC15);
       case 'Service Provider':
-        return const Color(0xFF0C4A6E);
+        return const Color(0xFF38BDF8);
       case 'Admin':
-        return const Color(0xFF991B1B);
+        return const Color(0xFFB91C1C);
       default:
         return Colors.grey;
     }

@@ -31,12 +31,12 @@ class _UserDashboardState extends State<UserDashboard> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
-        backgroundColor: const Color(0xFF065F46),
+        backgroundColor: const Color(0xFF34D399),
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        selectedItemColor: const Color(0xFF065F46),
+        selectedItemColor: const Color(0xFF34D399),
         unselectedItemColor: Colors.grey[700],
         onTap: (index) {
           setState(() {

@@ -92,7 +92,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Professional Profile'),
-        backgroundColor: const Color(0xFF0C4A6E),
+        backgroundColor: const Color(0xFF38BDF8),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -160,7 +160,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
                       icon: const Icon(Icons.save, color: Colors.white),
                       label: const Text('Save Changes', style: TextStyle(color: Colors.white)),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0C4A6E),
+                        backgroundColor: const Color(0xFF38BDF8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),

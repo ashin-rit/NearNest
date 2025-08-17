@@ -50,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
       'color': const Color(0xFF065F46),
     },
     {
-      'role': 'Service Provider',
+      'role': 'Services',
       'icon': Icons.business_center,
       'colors': [
         const Color(0xFF38BDF8),
@@ -89,7 +89,7 @@ class _LoginPageState extends State<LoginPage> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
- Future<void> _handleLogin() async {
+  Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showSnackBar('Please enter email and password', isError: true);
       return;
@@ -109,21 +109,31 @@ class _LoginPageState extends State<LoginPage> {
       final userUid = userCredential.user?.uid;
       if (userUid != null) {
         final userDoc = await _authService.getUserDataByUid(userUid);
-        final role = userDoc['role'];
-        final status = userDoc['status'] ?? 'approved';
 
-        if ((role == 'Shop' || role == 'Service Provider') && status == 'pending') {
-          // Navigate to the new awaiting approval page
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const AwaitingApprovalPage(),
-            ),
-          );
-          return;
+        // Crucial: Check if the user document exists and has data to prevent errors
+        if (userDoc.exists && userDoc.data() != null) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final role = userData['role'];
+          final status = userData['status'] ?? 'approved';
+
+          if ((role == 'Shop' || role == 'Service Provider') && status == 'pending') {
+            // Navigate to the awaiting approval page if status is pending
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const AwaitingApprovalPage(),
+              ),
+            );
+            return;
+          }
+
+          // Navigate directly to the dashboard if status is approved or not pending
+          _navigateToDashboard(role);
+          _showSnackBar('Login successful', isError: false);
+        } else {
+          // If the document doesn't exist, sign the user out to prevent issues
+          await _authService.signOut();
+          _showSnackBar('User data not found. Please contact support.', isError: true);
         }
-
-        _navigateToDashboard(role);
-        _showSnackBar('Login successful', isError: false);
       }
     } on FirebaseAuthException catch (e) {
       _handleFirebaseError(e);
@@ -138,7 +148,6 @@ class _LoginPageState extends State<LoginPage> {
       });
     }
   }
-
 
   void _navigateToDashboard(String role) {
     Widget dashboard;

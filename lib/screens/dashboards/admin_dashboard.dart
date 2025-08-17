@@ -11,7 +11,7 @@ class AdminDashboard extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
-        backgroundColor: const Color(0xFF991B1B), // Admin's primary color
+        backgroundColor: const Color(0xFFB91C1C), // Admin's primary color
         elevation: 0,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -89,7 +89,7 @@ class AdminDashboard extends StatelessWidget {
                   title: 'Admins',
                   count: adminCount,
                   icon: Icons.security,
-                  color: const Color(0xFF991B1B),
+                  color: const Color(0xFFB91C1C),
                 ),
                 const SizedBox(height: 40),
                 Center(
@@ -110,7 +110,7 @@ class AdminDashboard extends StatelessWidget {
                       style: TextStyle(color: Colors.white),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF991B1B),
+                      backgroundColor: const Color(0xFFB91C1C),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),

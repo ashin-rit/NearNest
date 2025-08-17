@@ -3,44 +3,39 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FavoritesService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Get a stream of the current user's favorite items
-  Stream<List<String>> getFavoriteItemIds() {
-    final user = _auth.currentUser;
-    if (user == null) {
-      return Stream.value([]);
-    }
-    return _firestore
-        .collection('favorites')
-        .where('userId', isEqualTo: user.uid)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.id).toList());
+  // Get a reference to the user's favorite collection
+  CollectionReference<Map<String, dynamic>> _favoritesCollection() {
+    final userId = _auth.currentUser!.uid;
+    return _firestore.collection('users').doc(userId).collection('favorites');
   }
 
-  // Check if an item is a favorite
-  Future<bool> isFavorite(String itemId) async {
-    final user = _auth.currentUser;
-    if (user == null) return false;
-    final doc = await _firestore.collection('favorites').doc(itemId).get();
-    return doc.exists;
-  }
-
-  // Add an item to favorites
-  Future<void> addFavorite(String itemId, String itemRole) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    await _firestore.collection('favorites').doc(itemId).set({
+  // Add a shop or service to favorites
+  Future<void> addFavorite(String itemId, String role) async {
+    await _favoritesCollection().doc(itemId).set({
       'itemId': itemId,
-      'userId': user.uid,
-      'itemRole': itemRole,
-      'timestamp': FieldValue.serverTimestamp(),
+      'role': role,
+      'favoritedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // Remove an item from favorites
+  // Remove a shop or service from favorites
   Future<void> removeFavorite(String itemId) async {
-    await _firestore.collection('favorites').doc(itemId).delete();
+    await _favoritesCollection().doc(itemId).delete();
+  }
+
+  // Check if an item is already a favorite
+  Future<bool> isFavorite(String itemId) async {
+    final doc = await _favoritesCollection().doc(itemId).get();
+    return doc.exists;
+  }
+
+  // Get a stream of favorite item IDs for the current user
+  Stream<List<String>> getFavoriteItemIds() {
+    return _favoritesCollection().snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.id).toList();
+    });
   }
 }
