@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/screens/dashboards/service_provider_profile_edit_screen.dart';
-import 'package:nearnest/screens/dashboards/service_provider_bookings_screen.dart'; // Import the new screen
+import 'package:nearnest/screens/dashboards/service_package_management_screen.dart'; // Import the new screen
+import 'package:nearnest/screens/dashboards/service_provider_bookings_screen.dart'; 
+import 'package:nearnest/screens/login_page.dart';// Import the bookings screen
 
 class ServiceProviderDashboard extends StatefulWidget {
   const ServiceProviderDashboard({super.key});
@@ -49,6 +51,13 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
     }
   }
 
+  Future<void> _signOut(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -74,140 +83,116 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
     final String phone = data['phone'] ?? 'N/A';
     final String address = data['address'] ?? 'N/A';
     final String description = data['description'] ?? 'No description provided.';
-    final String category = data['category'] ?? 'N/A';
-    final String businessHours = data['businessHours'] ?? 'N/A';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('$name Dashboard'),
-        backgroundColor: const Color(0xFF38BDF8),
+        title: Text('Service Dashboard: $name'),
+        backgroundColor: const Color(0xFF0EA5E9),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              // Wait for the user to return from the edit screen
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ServiceProviderProfileEditScreen(
+                    userId: _auth.currentUser!.uid,
+                    initialData: data,
+                  ),
+                ),
+              );
+              // Re-fetch data to update the dashboard
+              _fetchProviderData();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => _signOut(context), // Use the new _signOut method
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Welcome, Service Provider!',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'This is your professional dashboard.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 30),
-            _buildInfoCard(
-              title: 'Professional Details',
-              children: [
-                _buildInfoRow(Icons.person, 'Name', name),
-                _buildInfoRow(Icons.business_center, 'Role', role),
-                _buildInfoRow(Icons.category, 'Category', category),
-                _buildInfoRow(Icons.access_time, 'Business Hours', businessHours),
-                _buildInfoRow(Icons.description, 'Description', description, isMultiLine: true),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _buildInfoCard(
-              title: 'Contact Information',
-              children: [
-                _buildInfoRow(Icons.email, 'Email', email),
-                _buildInfoRow(Icons.phone, 'Phone', phone),
-                _buildInfoRow(Icons.location_on, 'Address', address, isMultiLine: true),
-              ],
-            ),
-            const SizedBox(height: 40),
-            Center(
-              child: Column(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => ServiceProviderProfileEditScreen(
-                            userId: _auth.currentUser!.uid,
-                            initialData: _providerData!.data() as Map<String, dynamic>,
-                          ),
-                        ),
-                      ).then((_) {
-                        _fetchProviderData();
-                      });
-                    },
-                    icon: const Icon(Icons.edit, color: Colors.white),
-                    label: const Text('Edit Professional Profile', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF38BDF8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ServiceProviderBookingsScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.calendar_today, color: Colors.white),
-                    label: const Text('View My Bookings', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF38BDF8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildProfileSection(context, name, role, email, phone, address, description),
+            const SizedBox(height: 24),
+            _buildActionButtons(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoCard({required String title, required List<Widget> children}) {
+  Widget _buildProfileSection(
+      BuildContext context,
+      String name,
+      String role,
+      String email,
+      String phone,
+      String address,
+      String description) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+            _buildInfoRow(
+              Icons.person,
+              'Name',
+              name,
             ),
-            const Divider(color: Colors.grey, height: 20),
-            ...children,
+            _buildInfoRow(
+              Icons.email,
+              'Email',
+              email,
+            ),
+            _buildInfoRow(
+              Icons.phone,
+              'Phone',
+              phone,
+            ),
+            _buildInfoRow(
+              Icons.badge,
+              'Role',
+              role,
+            ),
+            _buildInfoRow(
+              Icons.location_on,
+              'Address',
+              address,
+              isMultiLine: true,
+            ),
+            _buildInfoRow(
+              Icons.description,
+              'Description',
+              description,
+              isMultiLine: true,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value, {bool isMultiLine = false}) {
+  Widget _buildInfoRow(
+      IconData icon,
+      String label,
+      String value, {
+        bool isMultiLine = false,
+      }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
-        crossAxisAlignment: isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment:
+        isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
           Icon(icon, color: Colors.grey[600], size: 20),
           const SizedBox(width: 10),
@@ -217,10 +202,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
                 Text(
                   value,
@@ -235,6 +217,36 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context) {
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.calendar_today, color: Colors.blue),
+          title: const Text('Manage Bookings'),
+          trailing: const Icon(Icons.arrow_forward_ios),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ServiceProviderBookingsScreen()),
+            );
+          },
+        ),
+        const Divider(),
+        ListTile(
+          leading: const Icon(Icons.business_center, color: Colors.green),
+          title: const Text('Manage Services'), // New button
+          trailing: const Icon(Icons.arrow_forward_ios),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ServicePackageManagementScreen()), // Navigate to the new screen
+            );
+          },
+        ),
+      ],
     );
   }
 }

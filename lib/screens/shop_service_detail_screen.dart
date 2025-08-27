@@ -6,6 +6,7 @@ import 'package:nearnest/screens/review_screen.dart';
 import 'package:nearnest/services/favorites_service.dart';
 import 'package:nearnest/services/booking_service.dart';
 import 'package:nearnest/screens/common_widgets/date_time_picker.dart';
+import 'package:nearnest/models/service_package_model.dart'; // Import the new model
 
 class ShopServiceDetailScreen extends StatefulWidget {
   final String itemId;
@@ -24,24 +25,18 @@ class ShopServiceDetailScreen extends StatefulWidget {
 class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
   final FavoritesService _favoritesService = FavoritesService();
   final BookingService _bookingService = BookingService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Controller for the new task description field
-  final TextEditingController _taskDescriptionController = TextEditingController();
-
-  @override
-  void dispose() {
-    _taskDescriptionController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _showBookingDialog() async {
+  Future<void> _showBookingDialog(ServicePackage package) async {
     DateTime? selectedDateTime;
+    String? taskDescription;
+    final _taskDescriptionController = TextEditingController();
 
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Book a Service'),
+          title: Text('Book ${package.name}'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -54,12 +49,11 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                   },
                 ),
                 const SizedBox(height: 20),
-                TextFormField(
+                TextField(
                   controller: _taskDescriptionController,
                   decoration: const InputDecoration(
-                    labelText: 'Describe the task',
+                    labelText: 'Task Description (optional)',
                     border: OutlineInputBorder(),
-                    hintText: 'e.g., "Install a new faucet in the kitchen."',
                   ),
                   maxLines: 3,
                 ),
@@ -76,9 +70,11 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                 if (selectedDateTime != null) {
                   await _bookingService.createBooking(
                     serviceProviderId: widget.itemId,
-                    serviceName: widget.data['name'] ?? 'Service',
+                    serviceName: package.name,
                     bookingTime: Timestamp.fromDate(selectedDateTime!),
-                    taskDescription: _taskDescriptionController.text,
+                    taskDescription: _taskDescriptionController.text.isNotEmpty ? _taskDescriptionController.text : null,
+                    servicePrice: package.price,
+                    serviceDuration: package.durationInMinutes,
                   );
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Booking request sent successfully!')),
@@ -149,8 +145,7 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                 height: 250,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.broken_image, size: 250),
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 250),
               ),
             if (imageUrl.isEmpty)
               Container(
@@ -184,52 +179,83 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (role == 'Shop' && isDeliveryAvailable)
-                    Row(
-                      children: [
-                        Icon(Icons.delivery_dining, color: Colors.green[700]),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Delivery Available',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 24),
-                  if (role == 'Shop')
-                    ElevatedButton.icon(
+                  if (role == 'Shop') ...[
+                    ElevatedButton(
                       onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ProductsScreen(
                               shopId: itemId,
-                              shopName: name,
+                              shopName: name, // Fix: Pass the shopName
                             ),
                           ),
                         );
                       },
-                      icon: const Icon(Icons.shopping_bag),
-                      label: const Text('Browse Products'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
+                      child: const Text('View Products'),
+                    ),
+                  ] else if (role == 'Services') ...[
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Available Service Packages',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  if (role == 'Services')
-                    ElevatedButton.icon(
-                      onPressed: _showBookingDialog,
-                      icon: const Icon(Icons.calendar_month),
-                      label: const Text('Book Service'),
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                      ),
+                    const SizedBox(height: 8),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: _firestore
+                          .collection('users')
+                          .doc(itemId)
+                          .collection('servicePackages')
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(child: Text('Error: ${snapshot.error}'));
+                        }
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Center(child: Text('This service provider has no packages listed yet.'));
+                        }
+
+                        final packages = snapshot.data!.docs
+                            .map((doc) => ServicePackage.fromMap(doc.data() as Map<String, dynamic>, id: doc.id))
+                            .toList();
+
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: packages.length,
+                          itemBuilder: (context, index) {
+                            final package = packages[index];
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              child: ListTile(
+                                title: Text(package.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Description: ${package.description}'),
+                                    Text('Duration: ${package.durationInMinutes} mins'),
+                                    Text('Price: ₹${package.price.toStringAsFixed(2)}'),
+                                  ],
+                                ),
+                                trailing: ElevatedButton(
+                                  onPressed: () => _showBookingDialog(package),
+                                  child: const Text('Book Now'),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
+                  ],
                   const SizedBox(height: 24),
-                  _buildReviewsSection(context, itemId, name),
+                  _buildReviewsSection(itemId, role),
                 ],
               ),
             ),
@@ -239,7 +265,8 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
     );
   }
 
-  Widget _buildReviewsSection(BuildContext context, String shopId, String shopName) {
+  Widget _buildReviewsSection(String itemId, String role) {
+    // ... (rest of the review section code is unchanged)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -248,25 +275,34 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
           children: [
             const Text(
               'Reviews',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ReviewScreen(itemId: shopId),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.rate_review),
-              label: const Text('Write a Review'),
-            ),
+            if (role != 'Shop')
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ReviewScreen(
+                        itemId: itemId,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.rate_review),
+                label: const Text('Write a Review'),
+              ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('reviews').where('itemId', isEqualTo: shopId).snapshots(),
+          stream: FirebaseFirestore.instance
+              .collection('reviews')
+              .where('itemId', isEqualTo: itemId)
+              .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -275,27 +311,13 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
               return Center(child: Text('Error: ${snapshot.error}'));
             }
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Text('No reviews yet. Be the first to review!');
+              return const Center(child: Text('No reviews yet. Be the first!'));
             }
 
             final reviews = snapshot.data!.docs;
-            final double averageRating = reviews.map((doc) => (doc.data() as Map<String, dynamic>)['rating'] as num).reduce((a, b) => a + b) / reviews.length;
 
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber),
-                    const SizedBox(width: 5),
-                    Text(
-                      averageRating.toStringAsFixed(1),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(' (${reviews.length} reviews)'),
-                  ],
-                ),
-                const SizedBox(height: 10),
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),

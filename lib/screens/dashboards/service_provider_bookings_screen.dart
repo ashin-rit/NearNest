@@ -125,24 +125,34 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Date: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[0]}',
-                      ),
-                      Text(
-                        'Time: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[1].substring(0, 5)}',
-                      ),
-                      const SizedBox(height: 8),
-                      if (booking.taskDescription != null && booking.taskDescription!.isNotEmpty)
-                        Text(
-                          'Task: ${booking.taskDescription}',
-                          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[700]),
+                      // New: Display the price and duration
+                      if (booking.servicePrice != null && booking.serviceDuration != null)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Price: ₹${booking.servicePrice!.toStringAsFixed(2)}'),
+                            Text('Duration: ${booking.serviceDuration} mins'),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      if (booking.bookingTime != null)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Date: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[0]}',
+                            ),
+                            Text(
+                              'Time: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[1].substring(0, 5)}',
+                            ),
+                          ],
                         ),
                       const SizedBox(height: 8),
                       FutureBuilder<DocumentSnapshot>(
                         future: AuthService().getUserDataByUid(booking.userId),
                         builder: (context, userSnapshot) {
                           if (userSnapshot.connectionState == ConnectionState.waiting) {
-                            return const CircularProgressIndicator();
+                            return const Text('Customer: Loading...');
                           }
                           if (userSnapshot.hasError || !userSnapshot.hasData || !userSnapshot.data!.exists) {
                             return const Text('Customer: Not Found');

@@ -51,25 +51,21 @@ class MyBookingsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      if (booking.bookingTime != null)
+                      if (booking.servicePrice != null && booking.serviceDuration != null)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Date: ${booking.bookingTime!.toDate().toLocal().toString().split(' ')[0]}',
-                            ),
-                            Text(
-                              'Time: ${booking.bookingTime!.toDate().toLocal().toString().split(' ')[1].substring(0, 5)}',
-                            ),
+                            Text('Price: ₹${booking.servicePrice!.toStringAsFixed(2)}'),
+                            Text('Duration: ${booking.serviceDuration} mins'),
+                            const SizedBox(height: 8),
                           ],
                         ),
-                      const SizedBox(height: 8),
-                      // New: Display the task description
-                      if (booking.taskDescription != null && booking.taskDescription!.isNotEmpty)
-                        Text(
-                          'Task: ${booking.taskDescription}',
-                          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[700]),
-                        ),
+                      Text(
+                        'Date: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[0]}',
+                      ),
+                      Text(
+                        'Time: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[1].substring(0, 5)}',
+                      ),
                       const SizedBox(height: 8),
                       FutureBuilder<DocumentSnapshot>(
                         future: AuthService().getUserDataByUid(booking.serviceProviderId),
@@ -87,21 +83,15 @@ class MyBookingsScreen extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text('Status: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text(booking.status),
-                        ],
-                      ),
-                      // New: Display cancellation reason if booking is canceled
-                      if (booking.status == 'Canceled' && booking.cancellationReason != null && booking.cancellationReason!.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(
-                            'Reason: ${booking.cancellationReason}',
-                            style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.red),
-                          ),
+                      Text('Status: ${booking.status}'),
+                      // Display cancellation reason if available and the booking is canceled
+                      if (booking.status == 'Canceled' && booking.cancellationReason != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Cancellation Reason: ${booking.cancellationReason}',
+                          style: const TextStyle(color: Colors.red),
                         ),
+                      ],
                     ],
                   ),
                 ),

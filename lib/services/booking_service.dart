@@ -13,6 +13,8 @@ class BookingService {
     required String serviceName,
     required Timestamp bookingTime,
     String? taskDescription,
+    required double servicePrice, // New: Add this parameter
+    required int serviceDuration, // New: Add this parameter
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -30,6 +32,8 @@ class BookingService {
       status: 'Pending', // Initial status
       bookingTime: bookingTime,
       taskDescription: taskDescription,
+      servicePrice: servicePrice, // New: Pass the price to the model
+      serviceDuration: serviceDuration, // New: Pass the duration to the model
     );
 
     await bookingRef.set(newBooking.toMap());

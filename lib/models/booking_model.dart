@@ -9,7 +9,9 @@ class Booking {
   final String status;
   final Timestamp bookingTime;
   final String? taskDescription;
-  final String? cancellationReason; // New: Add this field
+  final String? cancellationReason;
+  final double? servicePrice; // New: Add this field
+  final int? serviceDuration; // New: Add this field
 
   Booking({
     required this.id,
@@ -19,7 +21,9 @@ class Booking {
     required this.status,
     required this.bookingTime,
     this.taskDescription,
-    this.cancellationReason, // New: Add this to the constructor
+    this.cancellationReason,
+    this.servicePrice, // New: Add to the constructor
+    this.serviceDuration, // New: Add to the constructor
   });
 
   // Factory constructor to create a Booking object from a Firestore document
@@ -32,7 +36,9 @@ class Booking {
       status: data['status'] as String,
       bookingTime: data['bookingTime'] as Timestamp,
       taskDescription: data['taskDescription'] as String?,
-      cancellationReason: data['cancellationReason'] as String?, // New: Retrieve the field
+      cancellationReason: data['cancellationReason'] as String?,
+      servicePrice: (data['servicePrice'] as num?)?.toDouble(), // New: Retrieve the field
+      serviceDuration: data['serviceDuration'] as int?, // New: Retrieve the field
     );
   }
 
@@ -46,7 +52,9 @@ class Booking {
       'status': status,
       'bookingTime': bookingTime,
       'taskDescription': taskDescription,
-      'cancellationReason': cancellationReason, // New: Add the field to the map
+      'cancellationReason': cancellationReason,
+      'servicePrice': servicePrice, // New: Add the field to the map
+      'serviceDuration': serviceDuration, // New: Add the field to the map
     };
   }
 }
