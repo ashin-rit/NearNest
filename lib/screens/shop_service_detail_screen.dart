@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/screens/products_screen.dart';
 import 'package:nearnest/screens/review_screen.dart';
 import 'package:nearnest/services/favorites_service.dart';
-import 'package:nearnest/services/reviews_service.dart';
+
 
 class ShopServiceDetailScreen extends StatefulWidget {
   final String itemId;
@@ -30,6 +30,7 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
     final String imageUrl = widget.data['imageUrl'] ?? '';
     final String role = widget.data['role'] ?? 'N/A';
     final String itemId = widget.itemId;
+    final bool isDeliveryAvailable = widget.data['isDeliveryAvailable'] ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -101,28 +102,28 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Role: $role',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'About:',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
                     description,
                     style: const TextStyle(
                       fontSize: 16,
                       height: 1.5,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  if (isDeliveryAvailable)
+                    Row(
+                      children: [
+                        Icon(Icons.delivery_dining, color: Colors.green[700]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Delivery Available',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 24),
                   if (role == 'Shop')
                     ElevatedButton.icon(

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/auth_service.dart';
-import 'package:nearnest/screens/dashboards/shop_profile_edit_screen.dart'; 
-import 'package:nearnest/screens/product_management_screen.dart'; 
-import 'package:nearnest/screens/login_page.dart'; 
+import 'package:nearnest/screens/dashboards/shop_profile_edit_screen.dart';
+import 'package:nearnest/screens/product_management_screen.dart';
+import 'package:nearnest/screens/login_page.dart';
 
 class ShopDashboard extends StatefulWidget {
   const ShopDashboard({super.key});
@@ -73,9 +73,11 @@ class _ShopDashboardState extends State<ShopDashboard> {
     final String email = data['email'] ?? 'N/A';
     final String phone = data['phone'] ?? 'N/A';
     final String address = data['address'] ?? 'N/A';
-    final String description = data['description'] ?? 'No description provided.';
+    final String description =
+        data['description'] ?? 'No description provided.';
     final String category = data['category'] ?? 'N/A';
     final String business_hours = data['business_hours'] ?? 'N/A';
+    final bool isDeliveryAvailable = data['isDeliveryAvailable'] ?? false;
     final String? uid = _auth.currentUser?.uid;
 
     return Scaffold(
@@ -120,7 +122,16 @@ class _ShopDashboardState extends State<ShopDashboard> {
                   description,
                   isMultiLine: true,
                 ),
-                _buildInfoRow(Icons.access_time, 'Business Hours', business_hours),
+                _buildInfoRow(
+                  Icons.access_time,
+                  'Business Hours',
+                  business_hours,
+                ),
+                _buildInfoRow(
+                  Icons.delivery_dining,
+                  'Delivery Available',
+                  isDeliveryAvailable ? 'Yes' : 'No',
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -148,8 +159,10 @@ class _ShopDashboardState extends State<ShopDashboard> {
                             MaterialPageRoute(
                               builder: (context) => ShopProfileEditScreen(
                                 userId: _auth.currentUser!.uid,
-                                initialData:
-                                    _shopData!.data() as Map<String, dynamic>,
+                                initialData: {
+                                  ..._shopData!.data() as Map<String, dynamic>,
+                                  'isDeliveryAvailable': isDeliveryAvailable,
+                                },
                               ),
                             ),
                           )
@@ -182,7 +195,10 @@ class _ShopDashboardState extends State<ShopDashboard> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
+                    icon: const Icon(
+                      Icons.add_shopping_cart,
+                      color: Colors.white,
+                    ),
                     label: const Text(
                       'Manage Products',
                       style: TextStyle(color: Colors.white),
@@ -239,7 +255,7 @@ class _ShopDashboardState extends State<ShopDashboard> {
                       final double total = (order['total'] as num).toDouble();
                       final bool isDelivery = order['isDelivery'] ?? false;
                       final List<dynamic> items = order['items'] ?? [];
-                      
+
                       return Card(
                         elevation: 4,
                         margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -250,7 +266,9 @@ class _ShopDashboardState extends State<ShopDashboard> {
                             children: [
                               Text('Status: $status'),
                               Text('Total: ₹${total.toStringAsFixed(2)}'),
-                              Text(isDelivery ? 'Type: Delivery' : 'Type: Pickup'),
+                              Text(
+                                isDelivery ? 'Type: Delivery' : 'Type: Pickup',
+                              ),
                             ],
                           ),
                           children: [
@@ -260,10 +278,23 @@ class _ShopDashboardState extends State<ShopDashboard> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   if (isDelivery)
-                                    Text('Address: ${order['deliveryAddress']['address'] ?? 'N/A'}'),
+                                    Text(
+                                      'Address: ${order['deliveryAddress']['address'] ?? 'N/A'}',
+                                    ),
                                   const SizedBox(height: 10),
-                                  const Text('Items:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  ...items.map((item) => Text(' - ${item['name']} (₹${(item['price'] as num).toDouble().toStringAsFixed(2)})')).toList(),
+                                  const Text(
+                                    'Items:',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  ...items
+                                      .map(
+                                        (item) => Text(
+                                          ' - ${item['name']} (₹${(item['price'] as num).toDouble().toStringAsFixed(2)})',
+                                        ),
+                                      )
+                                      .toList(),
                                   const SizedBox(height: 10),
                                   // You can add buttons here to update the order status
                                   ElevatedButton(

@@ -18,12 +18,12 @@ class ShopProfileEditScreen extends StatefulWidget {
 
 class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _shopNameController;
   late TextEditingController _shopPhoneNumberController;
   late TextEditingController _shopAddressController;
   late TextEditingController _descriptionController;
-  late TextEditingController _businessHoursController; // Added new controller
+  late TextEditingController _businessHoursController;
 
   final List<String> _categories = [
     'Grocery',
@@ -34,6 +34,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
     'Pharmacy',
   ];
   late String _selectedCategory;
+  late bool _isDeliveryAvailable;
 
   bool _isLoading = false;
 
@@ -44,7 +45,8 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
     _shopPhoneNumberController = TextEditingController(text: widget.initialData['phone']);
     _shopAddressController = TextEditingController(text: widget.initialData['address']);
     _descriptionController = TextEditingController(text: widget.initialData['description']);
-    _businessHoursController = TextEditingController(text: widget.initialData['business_hours']); // Initialized new controller
+    _businessHoursController = TextEditingController(text: widget.initialData['businessHours']);
+    _isDeliveryAvailable = widget.initialData['isDeliveryAvailable'] ?? false;
     _selectedCategory = widget.initialData['category'] ?? _categories.first;
   }
 
@@ -54,7 +56,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
     _shopPhoneNumberController.dispose();
     _shopAddressController.dispose();
     _descriptionController.dispose();
-    _businessHoursController.dispose(); // Added to dispose
+    _businessHoursController.dispose();
     super.dispose();
   }
 
@@ -64,21 +66,20 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
         _isLoading = true;
       });
 
-      final updatedData = {
-        'name': _shopNameController.text.trim(),
-        'phone': _shopPhoneNumberController.text.trim(),
-        'address': _shopAddressController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'business_hours': _businessHoursController.text.trim(), // Added to updated data
-        'category': _selectedCategory,
-      };
-
       try {
-        await FirebaseFirestore.instance.collection('users').doc(widget.userId).update(updatedData);
+        await FirebaseFirestore.instance.collection('users').doc(widget.userId).update({
+          'name': _shopNameController.text.trim(),
+          'phone': _shopPhoneNumberController.text.trim(),
+          'address': _shopAddressController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'businessHours': _businessHoursController.text.trim(),
+          'category': _selectedCategory,
+          'isDeliveryAvailable': _isDeliveryAvailable,
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
-        Navigator.of(context).pop();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update profile: $e')),
@@ -95,54 +96,65 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Business Profile'),
-        backgroundColor: const Color(0xFFFACC15),
+        title: const Text('Edit Profile'),
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildTextField(
                 controller: _shopNameController,
-                label: 'Business Name',
+                label: 'Shop Name',
                 icon: Icons.store,
-                validator: (value) => value!.isEmpty ? 'Name cannot be empty.' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Shop name cannot be empty.' : null,
               ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _shopPhoneNumberController,
-                label: 'Phone Number',
+                label: 'Contact Number',
                 icon: Icons.phone,
-                validator: (value) => value!.isEmpty ? 'Phone cannot be empty.' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Contact number cannot be empty.' : null,
               ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _shopAddressController,
                 label: 'Address',
                 icon: Icons.location_on,
-                validator: (value) => value!.isEmpty ? 'Address cannot be empty.' : null,
-                maxLines: 3,
+                validator: (value) =>
+                    value!.isEmpty ? 'Address cannot be empty.' : null,
               ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _descriptionController,
                 label: 'Description',
                 icon: Icons.description,
-                validator: (value) => value!.isEmpty ? 'Description cannot be empty.' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Description cannot be empty.' : null,
                 maxLines: 5,
               ),
               const SizedBox(height: 16),
-              // Added new: Business Hours field
               _buildTextField(
                 controller: _businessHoursController,
                 label: 'Business Hours',
                 icon: Icons.access_time,
-                validator: (value) => value!.isEmpty ? 'Business hours cannot be empty.' : null,
+                validator: (value) =>
+                    value!.isEmpty ? 'Business hours cannot be empty.' : null,
               ),
               const SizedBox(height: 16),
-              // New: Category dropdown
+              // Use the new custom checkbox field
+              _buildCheckboxField(
+                label: 'Delivery Available',
+                icon: Icons.delivery_dining,
+                isDeliveryAvailable: _isDeliveryAvailable,
+              ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 decoration: InputDecoration(
@@ -205,6 +217,59 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
       ),
       validator: validator,
       maxLines: maxLines,
+    );
+  }
+
+  Widget _buildCheckboxField({
+    required String label,
+    required IconData icon,
+    required bool isDeliveryAvailable,
+  }) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Radio<bool>(
+                  value: true,
+                  groupValue: isDeliveryAvailable,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _isDeliveryAvailable = value!;
+                    });
+                  },
+                ),
+                const Text('Yes'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Radio<bool>(
+                  value: false,
+                  groupValue: isDeliveryAvailable,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _isDeliveryAvailable = value!;
+                    });
+                  },
+                ),
+                const Text('No'),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
