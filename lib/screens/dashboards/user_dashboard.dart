@@ -4,6 +4,7 @@ import 'package:nearnest/screens/browse_screen.dart';
 import 'package:nearnest/screens/favorites_screen.dart';
 import 'package:nearnest/screens/my_orders_screen.dart';
 import 'package:nearnest/screens/user_profile_screen.dart';
+import 'package:nearnest/screens/my_bookings_screen.dart'; // Import the new screen
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -19,6 +20,7 @@ class _UserDashboardState extends State<UserDashboard> {
     const BrowseScreen(),
     const FavoritesScreen(),
     const MyOrdersScreen(),
+    const MyBookingsScreen(), // Add the new bookings screen
     const UserProfileScreen(),
   ];
 
@@ -26,6 +28,7 @@ class _UserDashboardState extends State<UserDashboard> {
     'NearNest - Browse',
     'My Favorites',
     'My Orders',
+    'My Bookings', // Add the new title
     'My Profile',
   ];
 
@@ -58,6 +61,10 @@ class _UserDashboardState extends State<UserDashboard> {
           BottomNavigationBarItem(
             icon: Icon(Icons.receipt),
             label: 'My Orders',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month), // Use a relevant icon
+            label: 'My Bookings',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

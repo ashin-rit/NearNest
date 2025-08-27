@@ -1,6 +1,7 @@
 // lib/screens/dashboards/service_provider_profile_edit_screen.dart
 import 'package:flutter/material.dart';
 import 'package:nearnest/services/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ServiceProviderProfileEditScreen extends StatefulWidget {
   final String userId;
@@ -23,6 +24,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _descriptionController;
+  late TextEditingController _businessHoursController;
 
   final List<String> _categories = [
     'Plumber',
@@ -43,6 +45,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     _phoneController = TextEditingController(text: widget.initialData['phone']);
     _addressController = TextEditingController(text: widget.initialData['address']);
     _descriptionController = TextEditingController(text: widget.initialData['description']);
+    _businessHoursController = TextEditingController(text: widget.initialData['businessHours'] ?? '');
     _selectedCategory = widget.initialData['category'] ?? _categories.first;
   }
 
@@ -52,6 +55,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     _phoneController.dispose();
     _addressController.dispose();
     _descriptionController.dispose();
+    _businessHoursController.dispose();
     super.dispose();
   }
 
@@ -66,6 +70,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
         'phone': _phoneController.text.trim(),
         'address': _addressController.text.trim(),
         'description': _descriptionController.text.trim(),
+        'businessHours': _businessHoursController.text.trim(),
         'category': _selectedCategory,
       };
 
@@ -74,7 +79,10 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );
-        Navigator.of(context).pop();
+      } on FirebaseException catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update profile: ${e.message}')),
+        );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update profile: $e')),
@@ -91,66 +99,77 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Professional Profile'),
-        backgroundColor: const Color(0xFF38BDF8),
+        title: const Text('Edit Profile'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildTextField(
                 controller: _nameController,
-                label: 'Professional Name',
+                label: 'Service Provider Name',
                 icon: Icons.person,
-                validator: (value) => value!.isEmpty ? 'Name cannot be empty.' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               _buildTextField(
                 controller: _phoneController,
-                label: 'Phone Number',
+                label: 'Contact Number',
                 icon: Icons.phone,
-                validator: (value) => value!.isEmpty ? 'Phone cannot be empty.' : null,
+                validator: (value) =>
+                value!.isEmpty ? 'Please enter a contact number.' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               _buildTextField(
                 controller: _addressController,
                 label: 'Address',
                 icon: Icons.location_on,
-                validator: (value) => value!.isEmpty ? 'Address cannot be empty.' : null,
                 maxLines: 3,
+                validator: (value) =>
+                value!.isEmpty ? 'Please enter an address.' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+              _buildTextField(
+                controller: _businessHoursController,
+                label: 'Business Hours (e.g., Mon-Fri, 9 AM - 5 PM)',
+                icon: Icons.access_time,
+                validator: (value) =>
+                value!.isEmpty ? 'Please enter your business hours.' : null,
+              ),
+              const SizedBox(height: 20),
               _buildTextField(
                 controller: _descriptionController,
                 label: 'Description of Services',
                 icon: Icons.description,
-                validator: (value) => value!.isEmpty ? 'Description cannot be empty.' : null,
                 maxLines: 5,
+                validator: (value) =>
+                value!.isEmpty ? 'Please enter a description.' : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 decoration: InputDecoration(
-                  labelText: 'Category',
+                  labelText: 'Service Category',
                   prefixIcon: const Icon(Icons.category),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                items: _categories.map((String category) {
-                  return DropdownMenuItem<String>(
+                items: _categories.map((category) {
+                  return DropdownMenuItem(
                     value: category,
                     child: Text(category),
                   );
                 }).toList(),
-                onChanged: (String? newValue) {
+                onChanged: (value) {
                   setState(() {
-                    _selectedCategory = newValue!;
+                    _selectedCategory = value!;
                   });
                 },
-                validator: (value) => value == null ? 'Please select a category.' : null,
+                validator: (value) =>
+                value == null ? 'Please select a category.' : null,
               ),
               const SizedBox(height: 30),
               _isLoading

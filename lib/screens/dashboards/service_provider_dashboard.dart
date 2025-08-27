@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/auth_service.dart';
-import 'package:nearnest/screens/dashboards/service_provider_profile_edit_screen.dart'; // Import the new screen
+import 'package:nearnest/screens/dashboards/service_provider_profile_edit_screen.dart';
+import 'package:nearnest/screens/dashboards/service_provider_bookings_screen.dart'; // Import the new screen
 
 class ServiceProviderDashboard extends StatefulWidget {
   const ServiceProviderDashboard({super.key});
@@ -74,11 +75,12 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
     final String address = data['address'] ?? 'N/A';
     final String description = data['description'] ?? 'No description provided.';
     final String category = data['category'] ?? 'N/A';
+    final String businessHours = data['businessHours'] ?? 'N/A';
 
     return Scaffold(
       appBar: AppBar(
         title: Text('$name Dashboard'),
-        backgroundColor: const Color(0xFF38BDF8), // Service Provider's primary color
+        backgroundColor: const Color(0xFF38BDF8),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -108,6 +110,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                 _buildInfoRow(Icons.person, 'Name', name),
                 _buildInfoRow(Icons.business_center, 'Role', role),
                 _buildInfoRow(Icons.category, 'Category', category),
+                _buildInfoRow(Icons.access_time, 'Business Hours', businessHours),
                 _buildInfoRow(Icons.description, 'Description', description, isMultiLine: true),
               ],
             ),
@@ -122,29 +125,51 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
             ),
             const SizedBox(height: 40),
             Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ServiceProviderProfileEditScreen(
-                        userId: _auth.currentUser!.uid,
-                        initialData: _providerData!.data() as Map<String, dynamic>,
+              child: Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => ServiceProviderProfileEditScreen(
+                            userId: _auth.currentUser!.uid,
+                            initialData: _providerData!.data() as Map<String, dynamic>,
+                          ),
+                        ),
+                      ).then((_) {
+                        _fetchProviderData();
+                      });
+                    },
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    label: const Text('Edit Professional Profile', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF38BDF8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
                       ),
+                      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
                     ),
-                  ).then((_) {
-                    // Refresh the data when returning from the edit screen
-                    _fetchProviderData();
-                  });
-                },
-                icon: const Icon(Icons.edit, color: Colors.white),
-                label: const Text('Edit Professional Profile', style: TextStyle(color: Colors.white)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF38BDF8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
-                ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const ServiceProviderBookingsScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.calendar_today, color: Colors.white),
+                    label: const Text('View My Bookings', style: TextStyle(color: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF38BDF8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

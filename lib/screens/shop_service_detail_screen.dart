@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/screens/products_screen.dart';
 import 'package:nearnest/screens/review_screen.dart';
 import 'package:nearnest/services/favorites_service.dart';
-
+import 'package:nearnest/services/booking_service.dart';
+import 'package:nearnest/screens/common_widgets/date_time_picker.dart';
 
 class ShopServiceDetailScreen extends StatefulWidget {
   final String itemId;
@@ -22,6 +23,80 @@ class ShopServiceDetailScreen extends StatefulWidget {
 
 class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
   final FavoritesService _favoritesService = FavoritesService();
+  final BookingService _bookingService = BookingService();
+
+  // Controller for the new task description field
+  final TextEditingController _taskDescriptionController = TextEditingController();
+
+  @override
+  void dispose() {
+    _taskDescriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showBookingDialog() async {
+    DateTime? selectedDateTime;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Book a Service'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Please select a preferred date and time for your booking.'),
+                const SizedBox(height: 20),
+                DateTimePicker(
+                  onDateTimeChanged: (dateTime) {
+                    selectedDateTime = dateTime;
+                  },
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _taskDescriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Describe the task',
+                    border: OutlineInputBorder(),
+                    hintText: 'e.g., "Install a new faucet in the kitchen."',
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (selectedDateTime != null) {
+                  await _bookingService.createBooking(
+                    serviceProviderId: widget.itemId,
+                    serviceName: widget.data['name'] ?? 'Service',
+                    bookingTime: Timestamp.fromDate(selectedDateTime!),
+                    taskDescription: _taskDescriptionController.text,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Booking request sent successfully!')),
+                  );
+                  Navigator.of(context).pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please select a date and time.')),
+                  );
+                }
+              },
+              child: const Text('Confirm Booking'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +184,7 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (isDeliveryAvailable)
+                  if (role == 'Shop' && isDeliveryAvailable)
                     Row(
                       children: [
                         Icon(Icons.delivery_dining, color: Colors.green[700]),
@@ -140,6 +215,15 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                       },
                       icon: const Icon(Icons.shopping_bag),
                       label: const Text('Browse Products'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                      ),
+                    ),
+                  if (role == 'Services')
+                    ElevatedButton.icon(
+                      onPressed: _showBookingDialog,
+                      icon: const Icon(Icons.calendar_month),
+                      label: const Text('Book Service'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size.fromHeight(50),
                       ),
