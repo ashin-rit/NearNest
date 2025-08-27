@@ -18,7 +18,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     'All',
     'Customer',
     'Shop',
-    'Service Provider',
+    'Services',
     'Admin'
   ];
 
@@ -152,7 +152,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     final String role = data['role'] ?? 'N/A';
                     final String status = data['status'] ?? 'N/A';
                     final bool isApproved = status == 'approved';
-                    final bool isAccountToggleable = (role == 'Shop' || role == 'Service Provider');
+                    final bool isAccountToggleable = (role == 'Shop' || role == 'Services');
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -202,7 +202,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return Icons.person;
       case 'Shop':
         return Icons.store;
-      case 'Service Provider':
+      case 'Services':
         return Icons.business_center;
       case 'Admin':
         return Icons.security;
@@ -217,7 +217,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return const Color(0xFF34D399);
       case 'Shop':
         return const Color(0xFFFACC15);
-      case 'Service Provider':
+      case 'Services':
         return const Color(0xFF38BDF8);
       case 'Admin':
         return const Color(0xFFB91C1C);

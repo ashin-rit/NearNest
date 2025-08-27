@@ -2,9 +2,26 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/screens/dashboards/user_management_screen.dart';
+import 'package:nearnest/services/auth_service.dart';
+import 'package:nearnest/screens/login_page.dart';
 
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
+
+  @override
+  State<AdminDashboard> createState() => _AdminDashboardState();
+}
+
+class _AdminDashboardState extends State<AdminDashboard> {
+  final AuthService _authService = AuthService();
+
+  Future<void> _logout() async {
+    await _authService.signOut();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +30,12 @@ class AdminDashboard extends StatelessWidget {
         title: const Text('Admin Dashboard'),
         backgroundColor: const Color(0xFFB91C1C), // Admin's primary color
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('users').snapshots(),
@@ -36,7 +59,7 @@ class AdminDashboard extends StatelessWidget {
               .where((doc) => doc['role'] == 'Shop')
               .length;
           final int serviceProviderCount = allUsers
-              .where((doc) => doc['role'] == 'Service Provider')
+              .where((doc) => doc['role'] == 'Services')
               .length;
           final int adminCount = allUsers
               .where((doc) => doc['role'] == 'Admin')

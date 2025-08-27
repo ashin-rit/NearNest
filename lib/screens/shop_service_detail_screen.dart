@@ -1,8 +1,10 @@
 // lib/screens/shop_service_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:nearnest/screens/shop_products_screen.dart'; // Import the new screen
+import 'package:nearnest/screens/products_screen.dart';
+import 'package:nearnest/screens/review_screen.dart';
 import 'package:nearnest/services/favorites_service.dart';
+import 'package:nearnest/services/reviews_service.dart';
 
 class ShopServiceDetailScreen extends StatefulWidget {
   final String itemId;
@@ -20,35 +22,50 @@ class ShopServiceDetailScreen extends StatefulWidget {
 
 class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
   final FavoritesService _favoritesService = FavoritesService();
-  bool _isFavorite = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkFavoriteStatus();
-  }
-
-  Future<void> _checkFavoriteStatus() async {
-    final status = await _favoritesService.isFavorite(widget.itemId);
-    setState(() {
-      _isFavorite = status;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
-    final String role = widget.data['role'] ?? 'N/A';
     final String name = widget.data['name'] ?? 'N/A';
-    final String description = widget.data['description'] ?? 'No description provided.';
+    final String description = widget.data['description'] ?? 'No description.';
     final String imageUrl = widget.data['imageUrl'] ?? '';
+    final String role = widget.data['role'] ?? 'N/A';
+    final String itemId = widget.itemId;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(name),
         backgroundColor: Theme.of(context).primaryColor,
+        actions: [
+          StreamBuilder<List<String>>(
+            stream: _favoritesService.getFavoriteItemIds(),
+            builder: (context, snapshot) {
+              final isFavorite = snapshot.hasData && snapshot.data!.contains(itemId);
+              return IconButton(
+                icon: Icon(
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: Colors.red,
+                ),
+                onPressed: () async {
+                  if (isFavorite) {
+                    await _favoritesService.removeFavorite(itemId);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$name removed from favorites.')),
+                    );
+                  } else {
+                    await _favoritesService.addFavorite(itemId, name);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$name added to favorites.')),
+                    );
+                  }
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (imageUrl.isNotEmpty)
               Image.network(
@@ -56,17 +73,18 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                 height: 250,
                 width: double.infinity,
                 fit: BoxFit.cover,
-              )
-            else
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.broken_image, size: 250),
+              ),
+            if (imageUrl.isEmpty)
               Container(
                 height: 250,
-                color: Theme.of(context).primaryColor.withOpacity(0.5),
-                child: Center(
-                  child: Icon(
-                    role == 'Shop' ? Icons.store : Icons.business_center,
-                    size: 100,
-                    color: Colors.white,
-                  ),
+                width: double.infinity,
+                color: Colors.grey[300],
+                child: Icon(
+                  role == 'Shop' ? Icons.store : Icons.business_center,
+                  size: 100,
+                  color: Colors.grey[600],
                 ),
               ),
             Padding(
@@ -74,87 +92,161 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          _isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: _isFavorite ? Colors.red : Colors.grey,
-                          size: 30,
-                        ),
-                        onPressed: () async {
-                          if (_isFavorite) {
-                            await _favoritesService.removeFavorite(widget.itemId);
-                          } else {
-                            await _favoritesService.addFavorite(widget.itemId, widget.data['role']!);
-                          }
-                          setState(() {
-                            _isFavorite = !_isFavorite;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                _isFavorite ? 'Added to favorites.' : 'Removed from favorites.',
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Role: $role',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey,
+                    ),
                   ),
                   const SizedBox(height: 16),
+                  const Text(
+                    'About:',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     description,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   if (role == 'Shop')
-                    Center(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ShopProductsScreen(
-                                shopId: widget.itemId,
-                                shopName: name,
-                              ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProductsScreen(
+                              shopId: itemId,
+                              shopName: name,
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.shopping_cart, color: Colors.white),
-                        label: const Text('View Products', style: TextStyle(color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEAB308),
-                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
                           ),
-                        ),
+                        );
+                      },
+                      icon: const Icon(Icons.shopping_bag),
+                      label: const Text('Browse Products'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
                       ),
                     ),
+                  const SizedBox(height: 24),
+                  _buildReviewsSection(context, itemId, name),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildReviewsSection(BuildContext context, String shopId, String shopName) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Reviews',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReviewScreen(itemId: shopId),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.rate_review),
+              label: const Text('Write a Review'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('reviews').where('itemId', isEqualTo: shopId).snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Text('No reviews yet. Be the first to review!');
+            }
+
+            final reviews = snapshot.data!.docs;
+            final double averageRating = reviews.map((doc) => (doc.data() as Map<String, dynamic>)['rating'] as num).reduce((a, b) => a + b) / reviews.length;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber),
+                    const SizedBox(width: 5),
+                    Text(
+                      averageRating.toStringAsFixed(1),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    Text(' (${reviews.length} reviews)'),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: reviews.length,
+                  itemBuilder: (context, index) {
+                    final reviewData = reviews[index].data() as Map<String, dynamic>;
+                    final String comment = reviewData['comment'] ?? '';
+                    final double rating = (reviewData['rating'] as num).toDouble();
+                    final String userId = reviewData['userId'] ?? 'Unknown User';
+
+                    return ListTile(
+                      leading: const Icon(Icons.person_pin),
+                      title: Text(userId),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: List.generate(5, (starIndex) {
+                              return Icon(
+                                starIndex < rating ? Icons.star : Icons.star_border,
+                                color: Colors.amber,
+                                size: 16,
+                              );
+                            }),
+                          ),
+                          Text(comment),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }

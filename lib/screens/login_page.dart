@@ -116,7 +116,7 @@ class _LoginPageState extends State<LoginPage> {
           final role = userData['role'];
           final status = userData['status'] ?? 'approved';
 
-          if ((role == 'Shop' || role == 'Service Provider') && status == 'pending') {
+          if ((role == 'Shop' || role == 'Services') && status == 'pending') {
             // Navigate to the awaiting approval page if status is pending
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
@@ -158,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
       case 'Shop':
         dashboard = const ShopDashboard();
         break;
-      case 'Service Provider':
+      case 'Services':
         dashboard = const ServiceProviderDashboard();
         break;
       case 'Customer':

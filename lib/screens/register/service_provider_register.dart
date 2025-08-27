@@ -8,7 +8,7 @@ class ServiceProviderRegisterPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> userConfig = {
-      'role': 'Service Provider',
+      'role': 'Services',
       'color': const Color(0xFF0C4A6E),
       'gradient': const [
         Color(0xFF38BDF8),

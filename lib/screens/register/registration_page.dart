@@ -64,6 +64,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
         'role': widget.userConfig['role'],
         'status': 'pending',
       };
+      
+      // Conditionally add review fields for shops and service providers
+      if (widget.userConfig['role'] == 'Shop' || widget.userConfig['role'] == 'Services') {
+        userData['averageRating'] = 0.0;
+        userData['reviewCount'] = 0;
+      }
 
       await _authService.registerWithEmailAndPassword(
         email: _emailController.text.trim(),

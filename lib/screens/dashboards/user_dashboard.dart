@@ -1,8 +1,9 @@
 // lib/screens/dashboards/user_dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:nearnest/screens/browse_screen.dart';
+import 'package:nearnest/screens/favorites_screen.dart';
+import 'package:nearnest/screens/my_orders_screen.dart';
 import 'package:nearnest/screens/user_profile_screen.dart';
-import 'package:nearnest/screens/favorites_screen.dart'; // Import the new screen
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -17,12 +18,14 @@ class _UserDashboardState extends State<UserDashboard> {
   final List<Widget> _pages = [
     const BrowseScreen(),
     const FavoritesScreen(),
+    const MyOrdersScreen(),
     const UserProfileScreen(),
   ];
 
   final List<String> _titles = [
     'NearNest - Browse',
     'My Favorites',
+    'My Orders',
     'My Profile',
   ];
 
@@ -51,6 +54,10 @@ class _UserDashboardState extends State<UserDashboard> {
           BottomNavigationBarItem(
             icon: Icon(Icons.favorite),
             label: 'Favorites',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt),
+            label: 'My Orders',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
