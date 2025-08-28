@@ -41,11 +41,12 @@ class BookingService {
 
   // New: Method to update the status of a booking
   Future<void> updateBookingStatus(
-      String bookingId, String newStatus, {String? cancellationReason}) async {
+      String bookingId, String newStatus, {String? cancellationReason, String? remarks}) async {
     final bookingRef = _firestore.collection('bookings').doc(bookingId);
     final updateData = {
       'status': newStatus,
       'cancellationReason': cancellationReason,
+      'remarks': remarks,
     };
     await bookingRef.update(updateData);
   }

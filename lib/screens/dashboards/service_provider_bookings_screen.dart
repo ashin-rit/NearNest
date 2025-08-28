@@ -15,9 +15,9 @@ class ServiceProviderBookingsScreen extends StatefulWidget {
 class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsScreen> {
   final BookingService _bookingService = BookingService();
 
-  Future<void> _updateBookingStatus(String bookingId, String newStatus, {String? cancellationReason}) async {
+  Future<void> _updateBookingStatus(String bookingId, String newStatus, {String? cancellationReason, String? remarks}) async {
     try {
-      await _bookingService.updateBookingStatus(bookingId, newStatus, cancellationReason: cancellationReason);
+      await _bookingService.updateBookingStatus(bookingId, newStatus, cancellationReason: cancellationReason, remarks: remarks);
       if (newStatus == 'Confirmed') {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Booking confirmed successfully!')),
@@ -84,6 +84,50 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
     );
   }
 
+  Future<void> _showConfirmationDialog(String bookingId) async {
+    final TextEditingController remarksController = TextEditingController();
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Booking'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                const Text('Please provide any remarks for the customer (optional).'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: remarksController,
+                  decoration: const InputDecoration(
+                    labelText: 'Remarks',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Go Back'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: const Text('Confirm Booking'),
+              onPressed: () {
+                _updateBookingStatus(bookingId, 'Confirmed', remarks: remarksController.text);
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,34 +169,24 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // New: Display the price and duration
-                      if (booking.servicePrice != null && booking.serviceDuration != null)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Price: ₹${booking.servicePrice!.toStringAsFixed(2)}'),
-                            Text('Duration: ${booking.serviceDuration} mins'),
-                            const SizedBox(height: 8),
-                          ],
-                        ),
-                      if (booking.bookingTime != null)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Date: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[0]}',
-                            ),
-                            Text(
-                              'Time: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[1].substring(0, 5)}',
-                            ),
-                          ],
+                      Text(
+                        'Date: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[0]}',
+                      ),
+                      Text(
+                        'Time: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[1].substring(0, 5)}',
+                      ),
+                      const SizedBox(height: 8),
+                      if (booking.taskDescription != null && booking.taskDescription!.isNotEmpty)
+                        Text(
+                          'Task: ${booking.taskDescription}',
+                          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[700]),
                         ),
                       const SizedBox(height: 8),
                       FutureBuilder<DocumentSnapshot>(
                         future: AuthService().getUserDataByUid(booking.userId),
                         builder: (context, userSnapshot) {
                           if (userSnapshot.connectionState == ConnectionState.waiting) {
-                            return const Text('Customer: Loading...');
+                            return const CircularProgressIndicator();
                           }
                           if (userSnapshot.hasError || !userSnapshot.hasData || !userSnapshot.data!.exists) {
                             return const Text('Customer: Not Found');
@@ -171,7 +205,7 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
                           const Spacer(),
                           if (booking.status == 'Pending') ...[
                             ElevatedButton(
-                              onPressed: () => _updateBookingStatus(booking.id, 'Confirmed'),
+                              onPressed: () => _showConfirmationDialog(booking.id),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                               ),

@@ -9,9 +9,10 @@ class Booking {
   final String status;
   final Timestamp bookingTime;
   final String? taskDescription;
+  final String? remarks;
   final String? cancellationReason;
-  final double? servicePrice; // New: Add this field
-  final int? serviceDuration; // New: Add this field
+  final double? servicePrice;
+  final int? serviceDuration;
 
   Booking({
     required this.id,
@@ -21,28 +22,28 @@ class Booking {
     required this.status,
     required this.bookingTime,
     this.taskDescription,
+    this.remarks,
     this.cancellationReason,
-    this.servicePrice, // New: Add to the constructor
-    this.serviceDuration, // New: Add to the constructor
+    this.servicePrice,
+    this.serviceDuration,
   });
 
-  // Factory constructor to create a Booking object from a Firestore document
   factory Booking.fromMap(Map<String, dynamic> data) {
     return Booking(
-      id: data['id'] as String,
-      userId: data['userId'] as String,
-      serviceProviderId: data['serviceProviderId'] as String,
-      serviceName: data['serviceName'] as String,
-      status: data['status'] as String,
-      bookingTime: data['bookingTime'] as Timestamp,
-      taskDescription: data['taskDescription'] as String?,
-      cancellationReason: data['cancellationReason'] as String?,
-      servicePrice: (data['servicePrice'] as num?)?.toDouble(), // New: Retrieve the field
-      serviceDuration: data['serviceDuration'] as int?, // New: Retrieve the field
+      id: data['id'] ?? '',
+      userId: data['userId'] ?? '',
+      serviceProviderId: data['serviceProviderId'] ?? '',
+      serviceName: data['serviceName'] ?? 'N/A',
+      status: data['status'] ?? 'Pending',
+      bookingTime: data['bookingTime'] ?? Timestamp.now(),
+      taskDescription: data['taskDescription'],
+      remarks: data['remarks'],
+      cancellationReason: data['cancellationReason'],
+      servicePrice: (data['servicePrice'] as num?)?.toDouble(),
+      serviceDuration: (data['serviceDuration'] as num?)?.toInt(),
     );
   }
 
-  // Method to convert a Booking object to a Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -52,9 +53,10 @@ class Booking {
       'status': status,
       'bookingTime': bookingTime,
       'taskDescription': taskDescription,
+      'remarks': remarks,
       'cancellationReason': cancellationReason,
-      'servicePrice': servicePrice, // New: Add the field to the map
-      'serviceDuration': serviceDuration, // New: Add the field to the map
+      'servicePrice': servicePrice,
+      'serviceDuration': serviceDuration,
     };
   }
 }
