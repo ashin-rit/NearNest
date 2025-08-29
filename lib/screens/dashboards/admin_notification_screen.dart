@@ -22,6 +22,13 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
     'Services',
   ];
 
+  @override
+  void dispose() {
+    _subjectController.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _sendNotification() async {
     final String subject = _subjectController.text.trim();
     final String message = _messageController.text.trim();
@@ -34,15 +41,17 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
       );
       return;
     }
-
-    // Placeholder for actual sending logic
-    // This is where you would call a Firebase Cloud Function
-    // or a backend API to send the notification/email.
-    // Example: sendNotificationToBackend(recipient, subject, message);
-
+    
+    // THIS IS A PLACEHOLDER FOR BACKEND FUNCTIONALITY.
+    // To send notifications to a group of users, you should use a backend service
+    // like Firebase Cloud Messaging (FCM). The function below is a placeholder
+    // that would call your backend to handle this securely.
+    // Example: await FirebaseFunctions.instance.httpsCallable('sendRoleNotification').call({
+    //   'role': recipient,
+    //   'subject': subject,
+    //   'message': message,
+    // });
     try {
-      // Here, you would implement the call to your backend.
-      // For demonstration, we'll just show a success message.
       await Future.delayed(const Duration(seconds: 1)); // Simulate network request
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -52,6 +61,9 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
       }
       _subjectController.clear();
       _messageController.clear();
+      setState(() {
+        _selectedRole = 'All Users';
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,82 +83,98 @@ class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Select Recipient Role',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedRole,
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_downward),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        _selectedRole = newValue;
-                      });
-                    }
-                  },
-                  items: _recipientRoles.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Select Recipient Role',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const Divider(height: 32),
+                    const Text('Recipient Role', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      value: _selectedRole,
+                      items: _recipientRoles.map((role) {
+                        return DropdownMenuItem(
+                          value: role,
+                          child: Text(role),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedRole = newValue!;
+                        });
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Subject',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _subjectController,
-              decoration: InputDecoration(
-                hintText: 'Enter subject...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Message',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _messageController,
-              maxLines: 8,
-              decoration: InputDecoration(
-                hintText: 'Type your message here...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _sendNotification,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFB91C1C),
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-                child: const Text(
-                  'Send Notification',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Compose Notification',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const Divider(height: 32),
+                    const Text('Subject', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _subjectController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter subject...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Message', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _messageController,
+                      maxLines: 8,
+                      decoration: InputDecoration(
+                        hintText: 'Type your message here...',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _sendNotification,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB91C1C),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Send Notification',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

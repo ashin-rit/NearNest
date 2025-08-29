@@ -6,6 +6,7 @@ import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/screens/dashboards/shop_profile_edit_screen.dart';
 import 'package:nearnest/screens/product_management_screen.dart';
 import 'package:nearnest/screens/login_page.dart';
+import 'package:nearnest/screens/dashboards/shop_order_management_screen.dart'; // Import the new screen
 
 class ShopDashboard extends StatefulWidget {
   const ShopDashboard({super.key});
@@ -214,105 +215,38 @@ class _ShopDashboardState extends State<ShopDashboard> {
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-            const Text(
-              'Incoming Orders',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (uid != null)
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('orders')
-                    .where('shopId', isEqualTo: uid)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('No new orders.'));
-                  }
-
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      final orderDoc = snapshot.data!.docs[index];
-                      final order = orderDoc.data() as Map<String, dynamic>;
-                      final String status = order['status'] ?? 'N/A';
-                      final double total = (order['total'] as num).toDouble();
-                      final bool isDelivery = order['isDelivery'] ?? false;
-                      final List<dynamic> items = order['items'] ?? [];
-
-                      return Card(
-                        elevation: 4,
-                        margin: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: ExpansionTile(
-                          title: Text('Order ID: ${orderDoc.id}'),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Status: $status'),
-                              Text('Total: ₹${total.toStringAsFixed(2)}'),
-                              Text(
-                                isDelivery ? 'Type: Delivery' : 'Type: Pickup',
-                              ),
-                            ],
-                          ),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (isDelivery)
-                                    Text(
-                                      'Address: ${order['deliveryAddress']['address'] ?? 'N/A'}',
-                                    ),
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'Items:',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  ...items
-                                      .map(
-                                        (item) => Text(
-                                          ' - ${item['name']} (₹${(item['price'] as num).toDouble().toStringAsFixed(2)})',
-                                        ),
-                                      )
-                                      .toList(),
-                                  const SizedBox(height: 10),
-                                  // You can add buttons here to update the order status
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      // TODO: Implement logic to update order status to 'Shipped' or 'Completed'
-                                    },
-                                    child: const Text('Mark as Completed'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => ShopOrderManagementScreen(
+                              shopId: _auth.currentUser!.uid),
                         ),
                       );
                     },
-                  );
-                },
+                    icon: const Icon(
+                      Icons.shopping_bag,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Manage Orders',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEAB308),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ),

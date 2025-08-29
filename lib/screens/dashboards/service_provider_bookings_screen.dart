@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/booking_service.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/models/booking_model.dart';
+import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ServiceProviderBookingsScreen extends StatefulWidget {
   const ServiceProviderBookingsScreen({super.key});
@@ -14,6 +16,15 @@ class ServiceProviderBookingsScreen extends StatefulWidget {
 
 class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsScreen> {
   final BookingService _bookingService = BookingService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  String _selectedStatus = 'All'; // Default to 'All' status
+
+  final List<String> _statusOptions = [
+    'All',
+    'Pending',
+    'Confirmed',
+    'Canceled',
+  ];
 
   Future<void> _updateBookingStatus(String bookingId, String newStatus, {String? cancellationReason, String? remarks}) async {
     try {
@@ -38,7 +49,7 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
     final TextEditingController reasonController = TextEditingController();
     return showDialog<void>(
       context: context,
-      barrierDismissible: false, // User must tap button to dismiss
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Cancel Booking'),
@@ -130,105 +141,162 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
 
   @override
   Widget build(BuildContext context) {
+    // Get the current user's ID to filter bookings
+    final String? serviceProviderId = _auth.currentUser?.uid;
+
+    if (serviceProviderId == null) {
+      return const Scaffold(
+        body: Center(child: Text('Service Provider not logged in.')),
+      );
+    }
+
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('bookings')
+        .where('serviceProviderId', isEqualTo: serviceProviderId);
+
+    if (_selectedStatus != 'All') {
+      query = query.where('status', isEqualTo: _selectedStatus);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Bookings'),
         backgroundColor: Theme.of(context).primaryColor,
       ),
-      body: StreamBuilder<List<Booking>>(
-        stream: _bookingService.getServiceProviderBookings(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('You have no new bookings.'));
-          }
+      body: Column(
+        children: [
+          Container(
+            color: Colors.grey[200],
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: _statusOptions.map((status) {
+                  final isSelected = _selectedStatus == status;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: ChoiceChip(
+                      label: Text(status),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedStatus = status;
+                        });
+                      },
+                      selectedColor: Theme.of(context).primaryColor,
+                      labelStyle: TextStyle(
+                        color: isSelected ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: query.snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No bookings found.'));
+                }
 
-          final bookings = snapshot.data!;
+                final bookings = snapshot.data!.docs;
 
-          return ListView.builder(
-            itemCount: bookings.length,
-            itemBuilder: (context, index) {
-              final booking = bookings[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Service: ${booking.serviceName}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Date: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[0]}',
-                      ),
-                      Text(
-                        'Time: ${booking.bookingTime.toDate().toLocal().toString().split(' ')[1].substring(0, 5)}',
-                      ),
-                      const SizedBox(height: 8),
-                      if (booking.taskDescription != null && booking.taskDescription!.isNotEmpty)
-                        Text(
-                          'Task: ${booking.taskDescription}',
-                          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[700]),
-                        ),
-                      const SizedBox(height: 8),
-                      FutureBuilder<DocumentSnapshot>(
-                        future: AuthService().getUserDataByUid(booking.userId),
-                        builder: (context, userSnapshot) {
-                          if (userSnapshot.connectionState == ConnectionState.waiting) {
-                            return const CircularProgressIndicator();
-                          }
-                          if (userSnapshot.hasError || !userSnapshot.hasData || !userSnapshot.data!.exists) {
-                            return const Text('Customer: Not Found');
-                          }
-                          final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                          return Text(
-                            'Customer: ${userData['name'] ?? 'N/A'}',
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text('Status: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text(booking.status),
-                          const Spacer(),
-                          if (booking.status == 'Pending') ...[
-                            ElevatedButton(
-                              onPressed: () => _showConfirmationDialog(booking.id),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
+                return ListView.builder(
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    final doc = bookings[index];
+                    final data = doc.data() as Map<String, dynamic>?;
+
+                    if (data == null) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final booking = Booking.fromMap(data);
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Service: ${booking.serviceName}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
-                              child: const Text('Confirm'),
                             ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () => _showCancellationDialog(booking.id),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
+                            const SizedBox(height: 8),
+                            Text(
+                              'Date: ${DateFormat('yyyy-MM-dd – kk:mm').format(booking.bookingTime.toDate())}',
+                            ),
+                            const SizedBox(height: 8),
+                            if (booking.taskDescription != null && booking.taskDescription!.isNotEmpty)
+                              Text(
+                                'Task: ${booking.taskDescription}',
+                                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[700]),
                               ),
-                              child: const Text('Cancel'),
+                            const SizedBox(height: 8),
+                            FutureBuilder<DocumentSnapshot>(
+                              future: AuthService().getUserDataByUid(booking.userId),
+                              builder: (context, userSnapshot) {
+                                if (userSnapshot.connectionState == ConnectionState.waiting) {
+                                  return const Text('Customer: Loading...');
+                                }
+                                if (userSnapshot.hasError || !userSnapshot.hasData || !userSnapshot.data!.exists) {
+                                  return const Text('Customer: Not Found');
+                                }
+                                final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                                return Text(
+                                  'Customer: ${userData['name'] ?? 'N/A'}',
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Text('Status: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text(booking.status),
+                                const Spacer(),
+                                if (booking.status == 'Pending') ...[
+                                  ElevatedButton(
+                                    onPressed: () => _showConfirmationDialog(booking.id),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                    ),
+                                    child: const Text('Confirm'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () => _showCancellationDialog(booking.id),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                    ),
+                                    child: const Text('Cancel'),
+                                  ),
+                                ],
+                              ],
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

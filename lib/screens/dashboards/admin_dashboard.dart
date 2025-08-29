@@ -6,7 +6,6 @@ import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/screens/login_page.dart';
 import 'package:nearnest/screens/dashboards/analytics_dashboard.dart';
 import 'package:nearnest/screens/dashboards/admin_booking_management_screen.dart';
-import 'package:nearnest/screens/dashboards/admin_service_package_management_screen.dart';
 import 'package:nearnest/screens/dashboards/admin_notification_screen.dart';
 import 'package:nearnest/screens/dashboards/admin_order_management_screen.dart'; // Import the new screen
 
@@ -224,20 +223,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
               context,
               MaterialPageRoute(
                 builder: (context) => const AdminOrderManagementScreen(),
-              ),
-            );
-          },
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.business_center, color: Colors.orange),
-          title: const Text('Manage Service Packages'),
-          trailing: const Icon(Icons.arrow_forward_ios),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AdminServicePackageManagementScreen(),
               ),
             );
           },
