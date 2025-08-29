@@ -1,22 +1,18 @@
-// lib/screens/dashboards/service_package_management_screen.dart
+// lib/screens/dashboards/admin_service_package_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
-class ServicePackageManagementScreen extends StatefulWidget {
-  const ServicePackageManagementScreen({super.key});
+class AdminServicePackageManagementScreen extends StatefulWidget {
+  const AdminServicePackageManagementScreen({super.key});
 
   @override
-  State<ServicePackageManagementScreen> createState() =>
-      _ServicePackageManagementScreenState();
+  State<AdminServicePackageManagementScreen> createState() =>
+      _AdminServicePackageManagementScreenState();
 }
 
-class _ServicePackageManagementScreenState
-    extends State<ServicePackageManagementScreen> {
+class _AdminServicePackageManagementScreenState
+    extends State<AdminServicePackageManagementScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  String get currentUserId => _auth.currentUser!.uid;
 
   Future<void> _showPackageDialog({DocumentSnapshot? doc}) async {
     final TextEditingController nameController =
@@ -25,6 +21,8 @@ class _ServicePackageManagementScreenState
         TextEditingController(text: doc?['description'] ?? '');
     final TextEditingController priceController =
         TextEditingController(text: doc?['price']?.toString() ?? '');
+    final TextEditingController serviceProviderIdController =
+        TextEditingController(text: doc?['serviceProviderId'] ?? '');
 
     await showDialog(
       context: context,
@@ -48,6 +46,10 @@ class _ServicePackageManagementScreenState
                   decoration: const InputDecoration(labelText: 'Price'),
                   keyboardType: TextInputType.number,
                 ),
+                TextField(
+                  controller: serviceProviderIdController,
+                  decoration: const InputDecoration(labelText: 'Service Provider ID'),
+                ),
               ],
             ),
           ),
@@ -61,15 +63,16 @@ class _ServicePackageManagementScreenState
                 final String name = nameController.text;
                 final String description = descriptionController.text;
                 final double price = double.tryParse(priceController.text) ?? 0.0;
+                final String serviceProviderId = serviceProviderIdController.text;
 
-                if (name.isNotEmpty && price > 0) {
+                if (name.isNotEmpty && price > 0 && serviceProviderId.isNotEmpty) {
                   try {
                     if (doc == null) {
                       await _firestore.collection('service_packages').add({
                         'name': name,
                         'description': description,
                         'price': price,
-                        'serviceProviderId': currentUserId,
+                        'serviceProviderId': serviceProviderId,
                         'createdAt': FieldValue.serverTimestamp(),
                       });
                       if (mounted) {
@@ -82,6 +85,7 @@ class _ServicePackageManagementScreenState
                         'name': name,
                         'description': description,
                         'price': price,
+                        'serviceProviderId': serviceProviderId,
                       });
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -156,14 +160,11 @@ class _ServicePackageManagementScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Service Packages'),
-        backgroundColor: Colors.green, // Use the service provider's primary color
+        title: const Text('Manage Service Packages'),
+        backgroundColor: const Color(0xFFB91C1C),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('service_packages')
-            .where('serviceProviderId', isEqualTo: currentUserId)
-            .snapshots(),
+        stream: _firestore.collection('service_packages').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -188,7 +189,7 @@ class _ServicePackageManagementScreenState
                   title: Text(data['name'] ?? 'No Name'),
                   subtitle: Text(
                       'Price: \$${(data['price'] ?? 0.0).toStringAsFixed(2)}\n'
-                      'Description: ${data['description'] ?? 'N/A'}'),
+                      'Provider ID: ${data['serviceProviderId'] ?? 'N/A'}'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -210,7 +211,7 @@ class _ServicePackageManagementScreenState
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showPackageDialog(),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFFB91C1C),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

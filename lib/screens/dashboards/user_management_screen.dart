@@ -1,6 +1,7 @@
 // lib/screens/dashboards/user_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nearnest/screens/dashboards/user_profile_view.dart'; // Import the new screen
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -16,10 +17,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   final List<String> _roles = [
     'All',
+    'Pending Approval',
     'Customer',
     'Shop',
     'Services',
-    'Admin'
   ];
 
   @override
@@ -41,19 +42,69 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     });
   }
 
-  Future<void> _updateUserStatus(String userId, bool isApproved) async {
-    final newStatus = isApproved ? 'approved' : 'pending';
+  Future<void> _updateUserStatus(String userId, String newStatus) async {
     try {
       await FirebaseFirestore.instance.collection('users').doc(userId).update({
         'status': newStatus,
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('User status updated to "$newStatus".')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User status updated to "$newStatus".')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update status: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update status: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteUser(String userId) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(userId).delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User deleted successfully!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete user: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showConfirmationDialog(String userId, String action) async {
+    final bool confirm = await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('$action User?'),
+          content: Text('Are you sure you want to $action this user?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(action, style: TextStyle(color: action == 'Delete' || action == 'Decline' ? Colors.red : Colors.green)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm) {
+      if (action == 'Delete') {
+        _deleteUser(userId);
+      } else {
+        _updateUserStatus(userId, action == 'Approve' ? 'approved' : 'pending');
+      }
     }
   }
 
@@ -130,9 +181,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   final name = data['name']?.toLowerCase() ?? '';
                   final email = data['email']?.toLowerCase() ?? '';
                   final role = data['role'] ?? 'N/A';
+                  final status = data['status'] ?? 'pending';
 
                   final matchesSearch = _searchQuery.isEmpty || name.contains(_searchQuery) || email.contains(_searchQuery);
-                  final matchesRole = _selectedRole == 'All' || role == _selectedRole;
+                  final matchesRole = (_selectedRole == 'All' && role != 'Admin') || (_selectedRole == 'Pending Approval' && status == 'pending' && (role == 'Shop' || role == 'Services')) || (_selectedRole == role && role != 'Admin');
 
                   return matchesSearch && matchesRole;
                 }).toList();
@@ -150,18 +202,62 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     final String name = data['name'] ?? 'N/A';
                     final String email = data['email'] ?? 'N/A';
                     final String role = data['role'] ?? 'N/A';
-                    final String status = data['status'] ?? 'N/A';
-                    final bool isApproved = status == 'approved';
+                    final String status = data['status'] ?? 'pending';
+
                     final bool isAccountToggleable = (role == 'Shop' || role == 'Services');
+                    final bool isPending = status == 'pending';
+
+                    final List<Widget> trailingButtons = [];
+                    if (isAccountToggleable) {
+                      if (isPending) {
+                        trailingButtons.add(
+                          ElevatedButton(
+                            onPressed: () => _showConfirmationDialog(doc.id, 'Approve'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                            child: const Text('Approve', style: TextStyle(color: Colors.white)),
+                          ),
+                        );
+                      } else {
+                        trailingButtons.add(
+                          ElevatedButton(
+                            onPressed: () => _showConfirmationDialog(doc.id, 'Decline'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                            child: const Text('Decline', style: TextStyle(color: Colors.white)),
+                          ),
+                        );
+                      }
+                    } else if (role == 'Customer') {
+                      trailingButtons.add(
+                        ElevatedButton(
+                          onPressed: () => _showConfirmationDialog(doc.id, 'Delete'),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade900),
+                          child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                        ),
+                      );
+                    }
+
+                    if (trailingButtons.isNotEmpty) {
+                      trailingButtons.add(const SizedBox(width: 8));
+                    }
+                    trailingButtons.add(
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => UserProfileView(userId: doc.id, userRole: role),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                        child: const Text('Details', style: TextStyle(color: Colors.white)),
+                      ),
+                    );
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       elevation: 2,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: SwitchListTile(
-                        value: isApproved,
-                        onChanged: isAccountToggleable ? (value) => _updateUserStatus(doc.id, value) : null,
-                        activeColor: Colors.green,
+                      child: ListTile(
                         title: Text(name),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,19 +266,23 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             const SizedBox(height: 4),
                             Text(
                               isAccountToggleable
-                                ? isApproved ? 'Approved' : 'Pending'
-                                : 'Role: $role (Auto-Approved)',
+                                  ? isPending ? 'Status: Pending' : 'Status: Approved'
+                                  : 'Role: $role',
                               style: TextStyle(
-                                color: isApproved ? Colors.green : Colors.orange,
+                                color: isAccountToggleable ? (isPending ? Colors.orange : Colors.green) : _getRoleColor(role),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
                             ),
                           ],
                         ),
-                        secondary: CircleAvatar(
+                        leading: CircleAvatar(
                           backgroundColor: _getRoleColor(role),
                           child: Icon(_getRoleIcon(role), color: Colors.white),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: trailingButtons,
                         ),
                       ),
                     );
@@ -204,8 +304,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return Icons.store;
       case 'Services':
         return Icons.business_center;
-      case 'Admin':
-        return Icons.security;
       default:
         return Icons.help_outline;
     }
@@ -219,10 +317,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         return const Color(0xFFFACC15);
       case 'Services':
         return const Color(0xFF38BDF8);
-      case 'Admin':
-        return const Color(0xFFB91C1C);
       default:
         return Colors.grey;
     }
   }
-}
+}   
