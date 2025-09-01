@@ -288,6 +288,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildLoginContent(Color primaryColor, Size size) {
+    final selectedUser = users[selectedIndex];
+
     return Container(
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
@@ -316,7 +318,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
           const SizedBox(height: 10),
           Text(
-            'Login as ${users[selectedIndex]['role']}',
+            'Login as ${selectedUser['role']}',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, color: Colors.grey[700]),
           ),
@@ -348,27 +350,30 @@ class _LoginPageState extends State<LoginPage> {
               style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
-          const SizedBox(height: 15),
-          TextButton(
-            onPressed: () {
-              // TODO: Implement forgot password logic
-            },
-            child: Text(
-              'Forgot Password?',
-              style: TextStyle(color: primaryColor),
+          // Conditionally hide these buttons for the Admin role
+          if (selectedUser['role'] != 'Admin') ...[
+            const SizedBox(height: 15),
+            TextButton(
+              onPressed: () {
+                // TODO: Implement forgot password logic
+              },
+              child: Text(
+                'Forgot Password?',
+                style: TextStyle(color: primaryColor),
+              ),
             ),
-          ),
-          TextButton(
-            onPressed: () {
-              final role = users[selectedIndex]['role'].toLowerCase();
-              final routeName = '/${role.replaceAll(' ', '_')}_registration';
-              Navigator.of(context).pushNamed(routeName);
-            },
-            child: Text(
-              "Don't have an account? Sign Up",
-              style: TextStyle(color: primaryColor),
+            TextButton(
+              onPressed: () {
+                final role = selectedUser['role'].toLowerCase();
+                final routeName = '/${role.replaceAll(' ', '_')}_registration';
+                Navigator.of(context).pushNamed(routeName);
+              },
+              child: Text(
+                "Don't have an account? Sign Up",
+                style: TextStyle(color: primaryColor),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

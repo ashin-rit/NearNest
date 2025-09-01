@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nearnest/screens/login_page.dart';
-import 'package:nearnest/screens/register/admin_register.dart';
 import 'package:nearnest/screens/register/customer_register.dart';
 import 'package:nearnest/screens/register/service_provider_register.dart';
 import 'package:nearnest/screens/register/shop_register.dart';
@@ -41,7 +40,6 @@ class MyApp extends StatelessWidget {
           fontFamily: 'SF Pro Display',
         ),
         routes: {
-          '/admin_registration': (context) => const AdminRegisterPage(),
           '/customer_registration': (context) => const CustomerRegisterPage(),
           '/services_registration': (context) => const ServiceProviderRegisterPage(),
           '/shops_registration': (context) => const ShopsRegisterPage(),

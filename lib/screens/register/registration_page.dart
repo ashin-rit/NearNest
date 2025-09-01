@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:nearnest/screens/common_widgets.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegistrationPage extends StatefulWidget {
   final Map<String, dynamic> userConfig;
@@ -18,7 +20,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _addressController = TextEditingController();
+  final _streetAddressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pincodeController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -40,6 +45,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   Future<void> _handleRegistration() async {
+    // PREVENT ADMIN REGISTRATION FOR SECURITY PURPOSES
+    if (widget.userConfig['role'] == 'admin') {
+      return;
+    }
+
     if (_passwordController.text != _confirmPasswordController.text) {
       _showSnackBar('Passwords do not match.', isError: true);
       return;
@@ -49,6 +59,15 @@ class _RegistrationPageState extends State<RegistrationPage> {
       _showSnackBar('You must accept the terms and conditions.', isError: true);
       return;
     }
+    
+    // Validate that all address fields are not empty for all roles
+    if (_streetAddressController.text.trim().isEmpty || 
+        _cityController.text.trim().isEmpty ||
+        _stateController.text.trim().isEmpty ||
+        _pincodeController.text.trim().isEmpty) {
+      _showSnackBar('All address fields are required.', isError: true);
+      return;
+    }
 
     setState(() {
       isLoading = true;
@@ -56,13 +75,42 @@ class _RegistrationPageState extends State<RegistrationPage> {
     });
 
     try {
+      // Combine address components for geocoding
+      final fullAddress =
+          '${_streetAddressController.text}, ${_cityController.text}, ${_stateController.text}, India - ${_pincodeController.text}';
+      
+      GeoPoint? geoPoint;
+      try {
+        List<Location> locations = await locationFromAddress(fullAddress);
+        if (locations.isNotEmpty) {
+          geoPoint = GeoPoint(locations.first.latitude, locations.first.longitude);
+        } else {
+          _showSnackBar('Could not get precise location. Please check your address.', isError: true);
+          setState(() {
+            isLoading = false;
+          });
+          return;
+        }
+      } catch (e) {
+        print('Geocoding failed during registration: $e');
+        _showSnackBar('Could not get precise location. Please check your address.', isError: true);
+        setState(() {
+          isLoading = false;
+        });
+        return;
+      }
+
       final userData = {
         'name': _fullNameController.text.trim(),
         'email': _emailController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'address': _addressController.text.trim(),
+        'streetAddress': _streetAddressController.text.trim(),
+        'city': _cityController.text.trim(),
+        'state': _stateController.text.trim(),
+        'pincode': _pincodeController.text.trim(),
         'role': widget.userConfig['role'],
         'status': 'pending',
+        'location': geoPoint, // Save the GeoPoint
       };
       
       // Conditionally add review fields for shops and service providers
@@ -97,7 +145,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
     _fullNameController.clear();
     _emailController.clear();
     _phoneController.clear();
-    _addressController.clear();
+    _streetAddressController.clear();
+    _cityController.clear();
+    _stateController.clear();
+    _pincodeController.clear();
     _passwordController.clear();
     _confirmPasswordController.clear();
     setState(() {
@@ -222,9 +273,27 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ),
           const SizedBox(height: 15),
           _buildTextField(
-            controller: _addressController,
-            hint: 'Address',
+            controller: _streetAddressController,
+            hint: 'Street Address',
             icon: Icons.location_on,
+          ),
+          const SizedBox(height: 15),
+          _buildTextField(
+            controller: _cityController,
+            hint: 'City',
+            icon: Icons.location_city,
+          ),
+          const SizedBox(height: 15),
+          _buildTextField(
+            controller: _stateController,
+            hint: 'State',
+            icon: Icons.map,
+          ),
+          const SizedBox(height: 15),
+          _buildTextField(
+            controller: _pincodeController,
+            hint: 'Pincode',
+            icon: Icons.local_post_office,
           ),
           const SizedBox(height: 15),
           _buildTextField(

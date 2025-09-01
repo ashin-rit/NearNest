@@ -1,4 +1,4 @@
-// lib/screens/dashboards/shop_profile_edit_screen.dart
+// lib/screens/dashboards/user_profile_edit_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,21 +6,21 @@ import 'package:nearnest/services/auth_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
-class ShopProfileEditScreen extends StatefulWidget {
+class UserProfileEditScreen extends StatefulWidget {
   final String userId;
   final Map<String, dynamic> initialData;
 
-  const ShopProfileEditScreen({
+  const UserProfileEditScreen({
     Key? key,
     required this.userId,
     required this.initialData,
   }) : super(key: key);
 
   @override
-  _ShopProfileEditScreenState createState() => _ShopProfileEditScreenState();
+  _UserProfileEditScreenState createState() => _UserProfileEditScreenState();
 }
 
-class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
+class _UserProfileEditScreenState extends State<UserProfileEditScreen> {
   final AuthService _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
@@ -30,10 +30,6 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _categoryController = TextEditingController();
-  final TextEditingController _businessHoursController = TextEditingController();
-  bool _isDeliveryAvailable = false;
   bool _isLoading = false;
   double? _latitude;
   double? _longitude;
@@ -48,10 +44,6 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
     _cityController.text = widget.initialData['city'] ?? '';
     _stateController.text = widget.initialData['state'] ?? '';
     _pincodeController.text = widget.initialData['pincode'] ?? '';
-    _descriptionController.text = widget.initialData['description'] ?? '';
-    _categoryController.text = widget.initialData['category'] ?? '';
-    _businessHoursController.text = widget.initialData['business_hours'] ?? '';
-    _isDeliveryAvailable = widget.initialData['isDeliveryAvailable'] ?? false;
     _latitude = widget.initialData['latitude'];
     _longitude = widget.initialData['longitude'];
   }
@@ -124,10 +116,6 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
           'city': _cityController.text,
           'state': _stateController.text,
           'pincode': _pincodeController.text,
-          'description': _descriptionController.text,
-          'category': _categoryController.text,
-          'business_hours': _businessHoursController.text,
-          'isDeliveryAvailable': _isDeliveryAvailable,
           'latitude': _latitude,
           'longitude': _longitude,
         });
@@ -151,8 +139,8 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Shop Profile'),
-        backgroundColor: const Color(0xFFFACC15),
+        title: const Text('Edit User Profile'),
+        backgroundColor: const Color(0xFF34D399),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -162,7 +150,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
-                    _buildTextField(_nameController, 'Shop Name'),
+                    _buildTextField(_nameController, 'Name'),
                     _buildTextField(_emailController, 'Email', keyboardType: TextInputType.emailAddress),
                     _buildTextField(_phoneController, 'Phone Number', keyboardType: TextInputType.phone),
                     _buildTextField(_streetAddressController, 'Street Address'),
@@ -175,7 +163,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
                       icon: const Icon(Icons.my_location),
                       label: const Text('Update to Current Location'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFACC15),
+                        backgroundColor: const Color(0xFF34D399),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -184,24 +172,10 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(_descriptionController, 'Description', maxLines: 3),
-                    _buildTextField(_categoryController, 'Category'),
-                    _buildTextField(_businessHoursController, 'Business Hours'),
-                    SwitchListTile(
-                      title: const Text('Delivery Available'),
-                      value: _isDeliveryAvailable,
-                      onChanged: (bool value) {
-                        setState(() {
-                          _isDeliveryAvailable = value;
-                        });
-                      },
-                      activeColor: const Color(0xFFFACC15),
-                    ),
-                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _updateProfile,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFACC15),
+                        backgroundColor: const Color(0xFF34D399),
                         padding: const EdgeInsets.symmetric(vertical: 15),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
