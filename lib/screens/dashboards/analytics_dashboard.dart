@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 
 class AnalyticsDashboard extends StatefulWidget {
   const AnalyticsDashboard({super.key});
@@ -952,22 +951,6 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard>
         );
       },
     );
-  }
-
-  Future<Map<String, int>> _fetchUserGrowthData() async {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .orderBy('created_at')
-        .get();
-
-    final Map<String, int> dailyUserGrowth = {};
-    for (var doc in querySnapshot.docs) {
-      final data = doc.data();
-      final timestamp = data['created_at'] as Timestamp;
-      final date = DateFormat('yyyy-MM-dd').format(timestamp.toDate());
-      dailyUserGrowth.update(date, (value) => value + 1, ifAbsent: () => 1);
-    }
-    return dailyUserGrowth;
   }
 
   Future<Map<String, int>> _fetchTopServices() async {

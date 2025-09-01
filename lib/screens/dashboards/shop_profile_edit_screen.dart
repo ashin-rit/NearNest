@@ -1,6 +1,5 @@
 // lib/screens/dashboards/shop_profile_edit_screen.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:geolocator/geolocator.dart';
@@ -52,8 +51,15 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
     _categoryController.text = widget.initialData['category'] ?? '';
     _businessHoursController.text = widget.initialData['business_hours'] ?? '';
     _isDeliveryAvailable = widget.initialData['isDeliveryAvailable'] ?? false;
-    _latitude = widget.initialData['latitude'];
-    _longitude = widget.initialData['longitude'];
+    
+    final GeoPoint? location = widget.initialData['location'] as GeoPoint?;
+    if (location != null) {
+      _latitude = location.latitude;
+      _longitude = location.longitude;
+    } else {
+      _latitude = widget.initialData['latitude'];
+      _longitude = widget.initialData['longitude'];
+    }
   }
 
   Future<void> _updateLocation() async {
@@ -116,7 +122,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
       });
 
       try {
-        await _authService.updateUserData(widget.userId, {
+        final Map<String, dynamic> dataToUpdate = {
           'name': _nameController.text,
           'email': _emailController.text,
           'phone': _phoneController.text,
@@ -128,9 +134,30 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
           'category': _categoryController.text,
           'business_hours': _businessHoursController.text,
           'isDeliveryAvailable': _isDeliveryAvailable,
-          'latitude': _latitude,
-          'longitude': _longitude,
-        });
+        };
+
+        // Geocoding validation
+        final fullAddress = '${_streetAddressController.text}, ${_cityController.text}, ${_stateController.text}, ${_pincodeController.text}';
+        List<Location> locations = await locationFromAddress(fullAddress);
+        
+        if (locations.isNotEmpty) {
+          _latitude = locations.first.latitude;
+          _longitude = locations.first.longitude;
+          dataToUpdate['location'] = GeoPoint(_latitude!, _longitude!);
+          dataToUpdate['latitude'] = _latitude;
+          dataToUpdate['longitude'] = _longitude;
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid address. Please enter a valid location.')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+        
+        await _authService.updateUserData(widget.userId, dataToUpdate);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );

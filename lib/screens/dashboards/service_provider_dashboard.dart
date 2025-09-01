@@ -78,10 +78,12 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
 
     final data = _providerData!.data() as Map<String, dynamic>;
     final String name = data['name'] ?? 'N/A';
-    final String role = data['role'] ?? 'N/A';
     final String email = data['email'] ?? 'N/A';
     final String phone = data['phone'] ?? 'N/A';
-    final String address = data['address'] ?? 'N/A';
+    final String streetAddress = data['streetAddress'] ?? 'N/A';
+    final String city = data['city'] ?? 'N/A';
+    final String state = data['state'] ?? 'N/A';
+    final String pincode = data['pincode'] ?? 'N/A';
     final String description = data['description'] ?? 'No description provided.';
 
     return Scaffold(
@@ -117,7 +119,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileSection(context, name, role, email, phone, address, description),
+            _buildProfileSection(context, name, email, phone, streetAddress, city, state, pincode, description),
             const SizedBox(height: 24),
             _buildActionButtons(context),
           ],
@@ -129,10 +131,12 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
   Widget _buildProfileSection(
       BuildContext context,
       String name,
-      String role,
       String email,
       String phone,
-      String address,
+      String streetAddress,
+      String city,
+      String state,
+      String pincode,
       String description) {
     return Card(
       elevation: 4,
@@ -160,14 +164,27 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
               phone,
             ),
             _buildInfoRow(
-              Icons.badge,
-              'Role',
-              role,
+              Icons.location_on,
+              'Street Address',
+              streetAddress,
+              isMultiLine: true,
             ),
             _buildInfoRow(
-              Icons.location_on,
-              'Address',
-              address,
+              Icons.location_city,
+              'City',
+              city,
+              isMultiLine: true,
+            ),
+            _buildInfoRow(
+              Icons.map,
+              'State',
+              state,
+              isMultiLine: true,
+            ),
+            _buildInfoRow(
+              Icons.pin_drop,
+              'Pincode',
+              pincode,
               isMultiLine: true,
             ),
             _buildInfoRow(

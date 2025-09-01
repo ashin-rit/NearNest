@@ -41,13 +41,20 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     _nameController.text = widget.initialData['name'] ?? '';
     _emailController.text = widget.initialData['email'] ?? '';
     _phoneController.text = widget.initialData['phone'] ?? '';
-    _streetAddressController.text = widget.initialData['street_address'] ?? '';
+    _streetAddressController.text = widget.initialData['streetAddress'] ?? '';
     _cityController.text = widget.initialData['city'] ?? '';
     _stateController.text = widget.initialData['state'] ?? '';
     _pincodeController.text = widget.initialData['pincode'] ?? '';
     _descriptionController.text = widget.initialData['description'] ?? '';
-    _latitude = widget.initialData['latitude'];
-    _longitude = widget.initialData['longitude'];
+    
+    final GeoPoint? location = widget.initialData['location'] as GeoPoint?;
+    if (location != null) {
+      _latitude = location.latitude;
+      _longitude = location.longitude;
+    } else {
+      _latitude = widget.initialData['latitude'];
+      _longitude = widget.initialData['longitude'];
+    }
   }
 
   Future<void> _updateLocation() async {
@@ -110,18 +117,39 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
       });
 
       try {
-        await _authService.updateUserData(widget.userId, {
+        final Map<String, dynamic> dataToUpdate = {
           'name': _nameController.text,
           'email': _emailController.text,
           'phone': _phoneController.text,
-          'street_address': _streetAddressController.text,
+          'streetAddress': _streetAddressController.text,
           'city': _cityController.text,
           'state': _stateController.text,
           'pincode': _pincodeController.text,
           'description': _descriptionController.text,
-          'latitude': _latitude,
-          'longitude': _longitude,
-        });
+        };
+
+        // Geocoding validation
+        final fullAddress = '${_streetAddressController.text}, ${_cityController.text}, ${_stateController.text}, ${_pincodeController.text}';
+        List<Location> locations = await locationFromAddress(fullAddress);
+        
+        if (locations.isNotEmpty) {
+          _latitude = locations.first.latitude;
+          _longitude = locations.first.longitude;
+          dataToUpdate['location'] = GeoPoint(_latitude!, _longitude!);
+          dataToUpdate['latitude'] = _latitude;
+          dataToUpdate['longitude'] = _longitude;
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid address. Please enter a valid location.')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+
+        await _authService.updateUserData(widget.userId, dataToUpdate);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully!')),
         );

@@ -1,5 +1,4 @@
 // lib/models/service_package_model.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ServicePackage {
   final String id;

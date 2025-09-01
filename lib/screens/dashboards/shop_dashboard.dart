@@ -70,10 +70,12 @@ class _ShopDashboardState extends State<ShopDashboard> {
 
     final data = _shopData!.data() as Map<String, dynamic>;
     final String name = data['name'] ?? 'N/A';
-    final String role = data['role'] ?? 'N/A';
     final String email = data['email'] ?? 'N/A';
     final String phone = data['phone'] ?? 'N/A';
-    final String address = data['address'] ?? 'N/A';
+    final String streetAddress = data['streetAddress'] ?? 'N/A';
+    final String city = data['city'] ?? 'N/A';
+    final String state = data['state'] ?? 'N/A';
+    final String pincode = data['pincode'] ?? 'N/A';
     final String description =
         data['description'] ?? 'No description provided.';
     final String category = data['category'] ?? 'N/A';
@@ -115,7 +117,6 @@ class _ShopDashboardState extends State<ShopDashboard> {
               title: 'Business Details',
               children: [
                 _buildInfoRow(Icons.store, 'Name', name),
-                _buildInfoRow(Icons.business_center, 'Role', role),
                 _buildInfoRow(Icons.category, 'Category', category),
                 _buildInfoRow(
                   Icons.description,
@@ -141,12 +142,10 @@ class _ShopDashboardState extends State<ShopDashboard> {
               children: [
                 _buildInfoRow(Icons.email, 'Email', email),
                 _buildInfoRow(Icons.phone, 'Phone', phone),
-                _buildInfoRow(
-                  Icons.location_on,
-                  'Address',
-                  address,
-                  isMultiLine: true,
-                ),
+                _buildInfoRow(Icons.location_on, 'Street Address', streetAddress),
+                _buildInfoRow(Icons.location_on, 'City', city),
+                _buildInfoRow(Icons.location_on, 'State', state),
+                _buildInfoRow(Icons.location_on, 'Pincode', pincode),
               ],
             ),
             const SizedBox(height: 40),
