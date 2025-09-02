@@ -17,16 +17,16 @@ class BrowseScreen extends StatefulWidget {
 class _BrowseScreenState extends State<BrowseScreen> {
   final Map<String, TextEditingController> _searchControllers = {
     'Shop': TextEditingController(),
-    'Service': TextEditingController(),
+    'Services': TextEditingController(),
   };
   final AuthService _authService = AuthService();
-  final Map<String, String> _searchQueries = {'Shop': '', 'Service': ''};
+  final Map<String, String> _searchQueries = {'Shop': '', 'Services': ''};
   GeoPoint? _userLocation;
   bool _isLoading = true;
-  final Map<String, String?> _selectedCategories = {'Shop': null, 'Service': null};
-  final Map<String, int?> _minRatings = {'Shop': null, 'Service': null};
-  final Map<String, double> _maxDistances = {'Shop': 100, 'Service': 100};
-  final Map<String, bool> _isDeliveryFilterOn = {'Shop': false, 'Service': false};
+  final Map<String, String?> _selectedCategories = {'Shop': null, 'Services': null};
+  final Map<String, int?> _minRatings = {'Shop': null, 'Services': null};
+  final Map<String, double> _maxDistances = {'Shop': 100, 'Services': 100};
+  final Map<String, bool> _isDeliveryFilterOn = {'Shop': false, 'Services': false};
 
   @override
   void initState() {
@@ -36,9 +36,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
         _searchQueries['Shop'] = _searchControllers['Shop']!.text;
       });
     });
-    _searchControllers['Service']!.addListener(() {
+    _searchControllers['Services']!.addListener(() {
       setState(() {
-        _searchQueries['Service'] = _searchControllers['Service']!.text;
+        _searchQueries['Services'] = _searchControllers['Services']!.text;
       });
     });
     _fetchUserData();
@@ -74,7 +74,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
   @override
   void dispose() {
     _searchControllers['Shop']!.dispose();
-    _searchControllers['Service']!.dispose();
+    _searchControllers['Services']!.dispose();
     super.dispose();
   }
 
@@ -169,9 +169,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
           final data = doc.data() as Map<String, dynamic>?;
           if (data == null) return false;
           final name = data['name']?.toString().toLowerCase() ?? '';
-          final description = data['description']?.toString().toLowerCase() ?? '';
+          final category = data['category']?.toString().toLowerCase() ?? '';
           final query = _searchQueries[role]!.toLowerCase();
-          return name.contains(query) || description.contains(query);
+          return name.contains(query) || category.contains(query);
         }).toList();
 
         if (filteredItems.isEmpty && _searchQueries[role]!.isNotEmpty) {
@@ -186,7 +186,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
             final doc = sortedDocs[index];
             final data = doc.data() as Map<String, dynamic>;
             final name = data['name'] ?? 'N/A';
-            final description = data['description'] ?? 'No description.';
+            final category = data['category'] ?? 'No Category.';
             final imageUrl = data['imageUrl'];
             final isDeliveryAvailable = data['isDeliveryAvailable'] ?? false;
             final geoPoint = data['location'] as GeoPoint?;
@@ -248,7 +248,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              description,
+                              category,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(color: Colors.grey[600]),
@@ -690,7 +690,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   child: TabBarView(
                     children: [
                       _buildTabContent('Shop', 'Search for shops...'),
-                      _buildTabContent('Service', 'Search for services...'),
+                      _buildTabContent('Services', 'Search for services...'),
                     ],
                   ),
                 ),
