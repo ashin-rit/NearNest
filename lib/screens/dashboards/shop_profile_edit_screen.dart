@@ -1,5 +1,6 @@
 // lib/screens/dashboards/shop_profile_edit_screen.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:geolocator/geolocator.dart';
@@ -43,7 +44,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
     _nameController.text = widget.initialData['name'] ?? '';
     _emailController.text = widget.initialData['email'] ?? '';
     _phoneController.text = widget.initialData['phone'] ?? '';
-    _streetAddressController.text = widget.initialData['street_address'] ?? '';
+    _streetAddressController.text = widget.initialData['streetAddress'] ?? '';
     _cityController.text = widget.initialData['city'] ?? '';
     _stateController.text = widget.initialData['state'] ?? '';
     _pincodeController.text = widget.initialData['pincode'] ?? '';
@@ -126,7 +127,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen> {
           'name': _nameController.text,
           'email': _emailController.text,
           'phone': _phoneController.text,
-          'street_address': _streetAddressController.text,
+          'streetAddress': _streetAddressController.text,
           'city': _cityController.text,
           'state': _stateController.text,
           'pincode': _pincodeController.text,

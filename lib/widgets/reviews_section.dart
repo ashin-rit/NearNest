@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/reviews_service.dart';
 import 'package:nearnest/models/review.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:nearnest/screens/review_screen.dart';
 
 class ReviewsSection extends StatelessWidget {
   final String itemId;
@@ -18,6 +22,9 @@ class ReviewsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final ReviewsService _reviewsService = ReviewsService();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -52,7 +59,12 @@ class ReviewsSection extends StatelessWidget {
             const Spacer(),
             ElevatedButton.icon(
               onPressed: () {
-                _showAddReviewDialog(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReviewScreen(itemId: itemId),
+                  ),
+                );
               },
               icon: const Icon(Icons.star_border),
               label: const Text('Add Review'),
@@ -60,15 +72,8 @@ class ReviewsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Recent Reviews',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
         StreamBuilder<QuerySnapshot>(
-          stream: ReviewsService().getReviews(itemId),
+          stream: _reviewsService.getReviews(itemId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -77,166 +82,98 @@ class ReviewsSection extends StatelessWidget {
               return Center(child: Text('Error: ${snapshot.error}'));
             }
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text('No reviews yet. Be the first to review!'),
-                ),
-              );
+              return const Center(child: Text('No reviews yet. Be the first!'));
             }
 
             final reviews = snapshot.data!.docs;
-            final userIds = reviews.map((doc) => doc['userId'] as String?).whereType<String>().toList();
 
-            if (userIds.isEmpty) {
-                return const Center(child: Text('No user data found.'));
-            }
+            return Column(
+              children: reviews.map((doc) {
+                final reviewData = doc.data() as Map<String, dynamic>;
+                final review = Review.fromMap(reviewData);
 
-            return FutureBuilder<QuerySnapshot>(
-              future: FirebaseFirestore.instance.collection('users').where(FieldPath.documentId, whereIn: userIds).get(),
-              builder: (context, userSnapshot) {
-                if (userSnapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (userSnapshot.hasError) {
-                  return Center(child: Text('Error fetching user data: ${userSnapshot.error}'));
-                }
-                if (!userSnapshot.hasData) {
-                  return const SizedBox.shrink();
+                final isUserReview = currentUser != null && review.userId == currentUser.uid;
+                String? displayDate;
+                if (review.lastUpdated != null) {
+                  displayDate = DateFormat('MMM d, yyyy').format(review.lastUpdated!.toDate());
                 }
 
-                // This is the updated section.
-                final userMap = {for (var doc in userSnapshot.data!.docs) doc.id: doc.data() as Map<String, dynamic>};
-
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: reviews.length,
-                  itemBuilder: (context, index) {
-                    final reviewData = reviews[index].data() as Map<String, dynamic>;
-                    final review = Review.fromMap(reviewData);
-
-                    // Ensure you cast to the correct type before accessing properties
-                    final reviewerName = userMap[review.userId]?['name'] ?? 'Anonymous';
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      child: ListTile(
-                        leading: const Icon(Icons.person, size: 40),
-                        title: Row(
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.person),
+                    ),
+                    title: Text(review.userId),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Text(reviewerName),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.star,
-                              color: Colors.amber,
-                              size: 16,
+                            RatingBarIndicator(
+                              rating: review.rating,
+                              itemBuilder: (context, index) => const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                              ),
+                              itemCount: 5,
+                              itemSize: 16.0,
+                              direction: Axis.horizontal,
                             ),
-                            Text(
-                              review.rating.toStringAsFixed(1),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
+                            if (displayDate != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Text(
+                                  'Edited on $displayDate',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                ),
+                              ),
                           ],
                         ),
-                        subtitle: Text(review.comment ?? 'No comment provided.'),
-                        trailing: review.createdAt != null
-                            ? Text(
-                                '${(review.createdAt as Timestamp).toDate().day}/${(review.createdAt as Timestamp).toDate().month}',
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                              )
-                            : const Text(
-                                'Just now',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                        Text(review.comment ?? 'No comment provided.'),
+                      ],
+                    ),
+                    trailing: isUserReview
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ReviewScreen(
+                                        itemId: itemId,
+                                        initialReview: review,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                      ),
-                    );
-                  },
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  await _reviewsService.deleteReview(
+                                    reviewDocId: doc.id,
+                                    itemId: itemId,
+                                    rating: review.rating.toInt(),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Review deleted successfully!')),
+                                  );
+                                },
+                              ),
+                            ],
+                          )
+                        : null,
+                  ),
                 );
-              },
+              }).toList(),
             );
           },
         ),
       ],
-    );
-  }
-
-  void _showAddReviewDialog(BuildContext context) {
-    double currentRating = 0.0;
-    final TextEditingController commentController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Add a Review'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Tap a star to rate:'),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(5, (index) {
-                        return IconButton(
-                          onPressed: () {
-                            setState(() {
-                              currentRating = index + 1.0;
-                            });
-                          },
-                          icon: Icon(
-                            index < currentRating ? Icons.star : Icons.star_border,
-                            color: Colors.amber,
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: commentController,
-                      decoration: const InputDecoration(
-                        labelText: 'Comment (optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: currentRating > 0
-                      ? () async {
-                          try {
-                            await ReviewsService().addReview(
-                              itemId: itemId,
-                              rating: currentRating.toInt(),
-                              comment: commentController.text,
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Review added successfully!')),
-                            );
-                            Navigator.pop(context);
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to add review: $e')),
-                            );
-                          }
-                        }
-                      : null,
-                  child: const Text('Submit'),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 }

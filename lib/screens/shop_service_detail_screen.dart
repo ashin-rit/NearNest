@@ -6,7 +6,10 @@ import 'package:nearnest/screens/review_screen.dart';
 import 'package:nearnest/services/favorites_service.dart';
 import 'package:nearnest/services/booking_service.dart';
 import 'package:nearnest/screens/common_widgets/date_time_picker.dart';
-import 'package:nearnest/models/service_package_model.dart'; // Import the new model
+import 'package:nearnest/models/service_package_model.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:intl/intl.dart';
+import 'package:nearnest/widgets/reviews_section.dart';
 
 class ShopServiceDetailScreen extends StatefulWidget {
   final String itemId;
@@ -101,7 +104,6 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
     final String imageUrl = widget.data['imageUrl'] ?? '';
     final String role = widget.data['role'] ?? 'N/A';
     final String itemId = widget.itemId;
-    final bool isDeliveryAvailable = widget.data['isDeliveryAvailable'] ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -171,189 +173,135 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (role == 'Shop') ...[
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ProductsScreen(
-                              shopId: itemId,
-                              shopName: name, // Fix: Pass the shopName
-                            ),
-                          ),
-                        );
-                      },
-                      child: const Text('View Products'),
-                    ),
-                  ] else if (role == 'Services') ...[
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Available Service Packages',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    StreamBuilder<QuerySnapshot>(
-                      stream: _firestore
-                          .collection('users')
-                          .doc(itemId)
-                          .collection('servicePackages')
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          return Center(child: Text('Error: ${snapshot.error}'));
-                        }
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return const Center(child: Text('This service provider has no packages listed yet.'));
-                        }
-
-                        final packages = snapshot.data!.docs
-                            .map((doc) => ServicePackage.fromMap(doc.data() as Map<String, dynamic>, id: doc.id))
-                            .toList();
-
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: packages.length,
-                          itemBuilder: (context, index) {
-                            final package = packages[index];
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              child: ListTile(
-                                title: Text(package.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Description: ${package.description}'),
-                                    Text('Duration: ${package.durationInMinutes} mins'),
-                                    Text('Price: ₹${package.price.toStringAsFixed(2)}'),
-                                  ],
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: _firestore.collection('users').doc(itemId).snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const LinearProgressIndicator();
+                      }
+                      final data = snapshot.data!.data() as Map<String, dynamic>;
+                      final averageRating = (data['averageRating'] as num?)?.toDouble() ?? 0.0;
+                      final reviewCount = (data['reviewCount'] as num?)?.toInt() ?? 0;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              RatingBarIndicator(
+                                rating: averageRating,
+                                itemBuilder: (context, index) => const Icon(
+                                  Icons.star,
+                                  color: Colors.amber,
                                 ),
-                                trailing: ElevatedButton(
-                                  onPressed: () => _showBookingDialog(package),
-                                  child: const Text('Book Now'),
+                                itemCount: 5,
+                                itemSize: 20.0,
+                                direction: Axis.horizontal,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                averageRating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black54,
                                 ),
                               ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  _buildReviewsSection(itemId, role),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            description,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (role == 'Shop') ...[
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ProductsScreen(
+                                      shopId: itemId,
+                                      shopName: name,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: const Text('View Products'),
+                            ),
+                          ] else if (role == 'Services') ...[
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Available Service Packages',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            StreamBuilder<QuerySnapshot>(
+                              stream: _firestore
+                                  .collection('users')
+                                  .doc(itemId)
+                                  .collection('servicePackages')
+                                  .snapshots(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const Center(child: CircularProgressIndicator());
+                                }
+                                if (snapshot.hasError) {
+                                  return Center(child: Text('Error: ${snapshot.error}'));
+                                }
+                                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                  return const Center(child: Text('This service provider has no packages listed yet.'));
+                                }
+                                final packages = snapshot.data!.docs
+                                    .map((doc) => ServicePackage.fromMap(doc.data() as Map<String, dynamic>, id: doc.id))
+                                    .toList();
+                                return ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: packages.length,
+                                  itemBuilder: (context, index) {
+                                    final package = packages[index];
+                                    return Card(
+                                      margin: const EdgeInsets.symmetric(vertical: 8),
+                                      child: ListTile(
+                                        title: Text(package.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        subtitle: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Description: ${package.description}'),
+                                            Text('Duration: ${package.durationInMinutes} mins'),
+                                            Text('Price: ₹${package.price.toStringAsFixed(2)}'),
+                                          ],
+                                        ),
+                                        trailing: ElevatedButton(
+                                          onPressed: () => _showBookingDialog(package),
+                                          child: const Text('Book Now'),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          ReviewsSection(itemId: itemId, averageRating: averageRating, reviewCount: reviewCount),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildReviewsSection(String itemId, String role) {
-    // ... (rest of the review section code is unchanged)
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Reviews',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (role != 'Shop')
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ReviewScreen(
-                        itemId: itemId,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.rate_review),
-                label: const Text('Write a Review'),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('reviews')
-              .where('itemId', isEqualTo: itemId)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text('No reviews yet. Be the first!'));
-            }
-
-            final reviews = snapshot.data!.docs;
-
-            return Column(
-              children: [
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: reviews.length,
-                  itemBuilder: (context, index) {
-                    final reviewData = reviews[index].data() as Map<String, dynamic>;
-                    final String comment = reviewData['comment'] ?? '';
-                    final double rating = (reviewData['rating'] as num).toDouble();
-                    final String userId = reviewData['userId'] ?? 'Unknown User';
-
-                    return ListTile(
-                      leading: const Icon(Icons.person_pin),
-                      title: Text(userId),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: List.generate(5, (starIndex) {
-                              return Icon(
-                                starIndex < rating ? Icons.star : Icons.star_border,
-                                color: Colors.amber,
-                                size: 16,
-                              );
-                            }),
-                          ),
-                          Text(comment),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            );
-          },
-        ),
-      ],
     );
   }
 }

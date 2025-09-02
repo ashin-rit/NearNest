@@ -1,13 +1,18 @@
 // lib/screens/review_screen.dart
 import 'package:flutter/material.dart';
 import 'package:nearnest/services/reviews_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:nearnest/models/review.dart';
 
 class ReviewScreen extends StatefulWidget {
   final String itemId;
+  final Review? initialReview;
 
   const ReviewScreen({
     super.key,
     required this.itemId,
+    this.initialReview,
   });
 
   @override
@@ -19,6 +24,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
   int _rating = 0;
   final TextEditingController _reviewController = TextEditingController();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialReview != null) {
+      _rating = widget.initialReview!.rating.toInt();
+      _reviewController.text = widget.initialReview!.comment ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -37,21 +51,36 @@ class _ReviewScreenState extends State<ReviewScreen> {
     setState(() {
       _isLoading = true;
     });
+    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You must be logged in to submit a review.')),
+      );
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
 
     try {
-      await _reviewsService.addReview(
+      final reviewDocId = user.uid;
+      
+      await _reviewsService.addOrUpdateReview(
         itemId: widget.itemId,
+        reviewDocId: reviewDocId,
         rating: _rating,
         comment: _reviewController.text,
+        lastUpdated: FieldValue.serverTimestamp(),
       );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Review submitted successfully!')),
       );
-      Navigator.pop(context); // Go back to the previous screen
+      Navigator.of(context).pop();
     } catch (e) {
-      print('Error submitting review: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit review. ${e.toString()}')),
+        SnackBar(content: Text('Failed to submit review: $e')),
       );
     } finally {
       setState(() {
@@ -64,8 +93,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Leave a Review'),
-        backgroundColor: const Color(0xFF34D399),
+        title: Text(widget.initialReview != null ? 'Edit Review' : 'Leave a Review'),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -73,8 +102,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Text(
-              'How was your experience?',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'Select your rating:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Row(
@@ -119,9 +148,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    child: const Text(
-                      'Submit Review',
-                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    child: Text(
+                      widget.initialReview != null ? 'Update Review' : 'Submit Review',
+                      style: const TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),
           ],
