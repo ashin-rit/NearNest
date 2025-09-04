@@ -1,4 +1,3 @@
-// lib/screens/product_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,216 +10,158 @@ class ProductManagementScreen extends StatefulWidget {
 }
 
 class _ProductManagementScreenState extends State<ProductManagementScreen> {
-  final _productNameController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _descriptionController = TextEditingController();
-
-  final _formKey = GlobalKey<FormState>();
   final _auth = FirebaseAuth.instance;
-  bool _isLoading = false;
+  final _firestore = FirebaseFirestore.instance;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
 
   @override
   void dispose() {
-    _productNameController.dispose();
-    _priceController.dispose();
-    _descriptionController.dispose();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _addProduct() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      final userId = _auth.currentUser!.uid;
-      final newProduct = {
-        'name': _productNameController.text.trim(),
-        'price': double.tryParse(_priceController.text) ?? 0.0,
-        'description': _descriptionController.text.trim(),
-        'shopId': userId,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-
-      try {
-        await FirebaseFirestore.instance.collection('products').add(newProduct);
-        _clearForm();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Product added successfully!')),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add product: $e')),
-        );
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
   }
 
-  void _clearForm() {
-    _productNameController.clear();
-    _priceController.clear();
-    _descriptionController.clear();
-  }
+  Future<void> _showAddEditProductDialog([DocumentSnapshot? productDoc]) async {
+    final isEditing = productDoc != null;
+    final data = isEditing ? productDoc.data() as Map<String, dynamic> : {};
+    final productNameController = TextEditingController(text: data['name'] ?? '');
+    final priceController = TextEditingController(text: data['price']?.toString() ?? '');
+    final descriptionController = TextEditingController(text: data['description'] ?? '');
+    final categoryController = TextEditingController(text: data['category'] ?? '');
+    final imageUrlController = TextEditingController(text: data['imageUrl'] ?? '');
 
-  Future<void> _deleteProduct(String productId) async {
-    try {
-      await FirebaseFirestore.instance.collection('products').doc(productId).delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product deleted successfully!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete product: $e')),
-      );
-    }
-  }
+    final formKey = GlobalKey<FormState>();
 
-  Future<void> _showEditProductDialog(DocumentSnapshot productDoc) async {
-    final Map<String, dynamic> data = productDoc.data() as Map<String, dynamic>;
-    final nameController = TextEditingController(text: data['name']);
-    final priceController = TextEditingController(text: data['price'].toString());
-    final descriptionController = TextEditingController(text: data['description']);
-
-    return showDialog(
+    await showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Product'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildTextField(controller: nameController, label: 'Product Name', icon: Icons.label),
-                const SizedBox(height: 16),
-                _buildTextField(controller: priceController, label: 'Price', icon: Icons.attach_money, keyboardType: TextInputType.number),
-                const SizedBox(height: 16),
-                _buildTextField(controller: descriptionController, label: 'Description', icon: Icons.description, maxLines: 4),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty && priceController.text.isNotEmpty) {
-                  await productDoc.reference.update({
-                    'name': nameController.text.trim(),
-                    'price': double.tryParse(priceController.text) ?? data['price'],
-                    'description': descriptionController.text.trim(),
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Products'),
-        backgroundColor: const Color(0xFFEAB308),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildSectionTitle('Add a New Product'),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  _buildTextField(
-                    controller: _productNameController,
-                    label: 'Product Name',
-                    icon: Icons.label,
-                    validator: (value) => value!.isEmpty ? 'Name cannot be empty.' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _priceController,
-                    label: 'Price',
-                    icon: Icons.attach_money,
-                    keyboardType: TextInputType.number,
-                    validator: (value) => value!.isEmpty ? 'Price cannot be empty.' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    controller: _descriptionController,
-                    label: 'Description',
-                    icon: Icons.description,
-                    maxLines: 4,
-                    validator: (value) => value!.isEmpty ? 'Description cannot be empty.' : null,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _addProduct,
-                    icon: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Add Product', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEAB308),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(isEditing ? 'Edit Product' : 'Add New Product'),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: productNameController,
+                        decoration: const InputDecoration(labelText: 'Product Name'),
+                        validator: (value) => value!.isEmpty ? 'Name cannot be empty' : null,
                       ),
-                    ),
+                      TextFormField(
+                        controller: priceController,
+                        decoration: const InputDecoration(labelText: 'Price'),
+                        keyboardType: TextInputType.number,
+                        validator: (value) => value!.isEmpty ? 'Price cannot be empty' : null,
+                      ),
+                      TextFormField(
+                        controller: descriptionController,
+                        decoration: const InputDecoration(labelText: 'Description'),
+                        maxLines: 3,
+                      ),
+                      TextFormField(
+                        controller: categoryController,
+                        decoration: const InputDecoration(labelText: 'Category'),
+                        validator: (value) => value!.isEmpty ? 'Category cannot be empty' : null,
+                      ),
+                      TextFormField(
+                        controller: imageUrlController,
+                        decoration: const InputDecoration(labelText: 'Image URL'),
+                        keyboardType: TextInputType.url,
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey),
+                        ),
+                        child: imageUrlController.text.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  imageUrlController.text,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const Center(child: Icon(Icons.image_not_supported, size: 50, color: Colors.red)),
+                                ),
+                              )
+                            : const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.image, size: 50, color: Colors.grey),
+                                    SizedBox(height: 8),
+                                    Text('Enter an image URL'),
+                                  ],
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            _buildSectionTitle('Your Products'),
-            _buildProductList(),
-          ],
-        ),
-      ),
-    );
-  }
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      final userId = _auth.currentUser!.uid;
 
-  Widget _buildProductList() {
-    final userId = _auth.currentUser!.uid;
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('products')
-          .where('shopId', isEqualTo: userId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No products found.'));
-        }
+                      final productData = {
+                        'name': productNameController.text.trim(),
+                        'price': double.tryParse(priceController.text) ?? 0.0,
+                        'description': descriptionController.text.trim(),
+                        'category': categoryController.text.trim(),
+                        'imageUrl': imageUrlController.text.trim(),
+                        'shopId': userId,
+                        'isAvailable': isEditing ? data['isAvailable'] : true,
+                        'createdAt': isEditing ? data['createdAt'] : FieldValue.serverTimestamp(),
+                        'lastUpdated': FieldValue.serverTimestamp(),
+                      };
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            DocumentSnapshot document = snapshot.data!.docs[index];
-            Map<String, dynamic> data = document.data() as Map<String, dynamic>;
-            return ProductListItem(
-              name: data['name'],
-              price: data['price'],
-              description: data['description'],
-              onEdit: () => _showEditProductDialog(document),
-              onDelete: () => _deleteProduct(document.id),
+                      try {
+                        if (isEditing) {
+                          await _firestore.collection('products').doc(productDoc.id).update(productData);
+                        } else {
+                          await _firestore.collection('products').add(productData);
+                        }
+                        if (!mounted) return;
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Product ${isEditing ? 'updated' : 'added'} successfully!')),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to ${isEditing ? 'update' : 'add'} product: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: Text(isEditing ? 'Save' : 'Add'),
+                ),
+              ],
             );
           },
         );
@@ -228,125 +169,248 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    String? Function(String?)? validator,
-    TextInputType keyboardType = TextInputType.text,
-    int? maxLines = 1,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      validator: validator,
-      maxLines: maxLines,
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFFEAB308),
-        ),
+  Future<void> _deleteProduct(String productId) async {
+    final confirmed = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Deletion'),
+        content: const Text('Are you sure you want to delete this product? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
+
+    if (confirmed == true) {
+      try {
+        await _firestore.collection('products').doc(productId).delete();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product deleted successfully!')),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete product: $e')),
+        );
+      }
+    }
   }
-}
 
-class ProductListItem extends StatelessWidget {
-  final String name;
-  final double price;
-  final String description;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  const ProductListItem({
-    super.key,
-    required this.name,
-    required this.price,
-    required this.description,
-    required this.onEdit,
-    required this.onDelete,
-  });
+  Future<void> _toggleAvailability(String productId, bool isAvailable) async {
+    try {
+      await _firestore.collection('products').doc(productId).update({
+        'isAvailable': !isAvailable,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Product is now ${!isAvailable ? 'available' : 'unavailable'}.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update product availability: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: const Icon(Icons.shopping_bag, color: Color(0xFFEAB308), size: 40),
-        title: Text(
-          name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) {
+      return const Center(child: Text('You must be logged in to manage products.'));
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Product Management'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => setState(() {}),
           ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              'Price: \$${price.toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: Colors.green,
-                fontWeight: FontWeight.w600,
+        ],
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestore
+            .collection('products')
+            .where('shopId', isEqualTo: userId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('You have no products yet.'));
+          }
+
+          final categories =
+              snapshot.data!.docs.map((doc) => (doc.data() as Map<String, dynamic>)['category']?.toString() ?? 'Other')
+                  .toSet().toList();
+          categories.sort();
+
+          final filteredProducts = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final name = data['name']?.toString().toLowerCase() ?? '';
+            final category = data['category']?.toString() ?? '';
+            final matchesSearch = _searchQuery.isEmpty || name.contains(_searchQuery);
+            final matchesCategory = _selectedCategory == null || category == _selectedCategory;
+            return matchesSearch && matchesCategory;
+          }).toList();
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: const InputDecoration(
+                          labelText: 'Search Products',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(25.0))),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: _selectedCategory,
+                      hint: const Text('Category'),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('All'),
+                        ),
+                        ...categories.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedCategory = newValue;
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(description),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
-              onPressed: onEdit,
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Confirm Deletion'),
-                    content: const Text('Are you sure you want to delete this product?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          onDelete();
-                          Navigator.of(context).pop();
+              Expanded(
+                child: filteredProducts.isEmpty
+                    ? const Center(child: Text('No products match your search/filter.'))
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(8.0),
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 200,
+                          childAspectRatio: 0.7,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          final productDoc = filteredProducts[index];
+                          final data = productDoc.data() as Map<String, dynamic>;
+                          final bool isAvailable = data['isAvailable'] ?? true;
+                          final String imageUrl = data['imageUrl'] ?? '';
+
+                          return Card(
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            child: Stack(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                                        child: imageUrl.isNotEmpty
+                                            ? Image.network(
+                                                imageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) =>
+                                                    const Icon(Icons.image_not_supported, size: 80, color: Colors.grey),
+                                              )
+                                            : const Icon(Icons.camera_alt, size: 80, color: Colors.grey),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            data['name'] ?? 'No Name',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '₹${data['price']?.toString() ?? '0.00'}',
+                                            style: const TextStyle(color: Colors.green, fontSize: 12),
+                                          ),
+                                          const SizedBox(height: 8),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  left: 8,
+                                  child: IconButton(
+                                    icon: Icon(
+                                      isAvailable ? Icons.visibility : Icons.visibility_off,
+                                      color: isAvailable ? Colors.green : Colors.grey,
+                                    ),
+                                    onPressed: () => _toggleAvailability(productDoc.id, isAvailable),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  right: 8,
+                                  child: Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                                        onPressed: () => _showAddEditProductDialog(productDoc),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                        onPressed: () => _deleteProduct(productDoc.id),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
                         },
-                        child: const Text('Delete'),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+              ),
+            ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddEditProductDialog(),
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

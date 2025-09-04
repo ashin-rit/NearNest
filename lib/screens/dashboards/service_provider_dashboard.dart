@@ -80,6 +80,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
     final String name = data['name'] ?? 'N/A';
     final String email = data['email'] ?? 'N/A';
     final String phone = data['phone'] ?? 'N/A';
+    final String category = data['category'] ?? 'N/A';
     final String streetAddress = data['streetAddress'] ?? 'N/A';
     final String city = data['city'] ?? 'N/A';
     final String state = data['state'] ?? 'N/A';
@@ -119,7 +120,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileSection(context, name, email, phone, streetAddress, city, state, pincode, description),
+            _buildProfileSection(context, name, email, phone,category, streetAddress, city, state, pincode, description),
             const SizedBox(height: 24),
             _buildActionButtons(context),
           ],
@@ -133,6 +134,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
       String name,
       String email,
       String phone,
+      String category,
       String streetAddress,
       String city,
       String state,
@@ -162,6 +164,11 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
               Icons.phone,
               'Phone',
               phone,
+            ),
+            _buildInfoRow(
+              Icons.category,
+              'Category',
+              category,
             ),
             _buildInfoRow(
               Icons.location_on,

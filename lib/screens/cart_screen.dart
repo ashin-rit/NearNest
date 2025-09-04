@@ -1,4 +1,3 @@
-// lib/screens/cart_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:nearnest/services/shopping_cart_service.dart';
@@ -14,6 +13,19 @@ class CartScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shopping Cart'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_forever),
+            onPressed: () {
+              cart.clearCart();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cart cleared!'),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: cart.items.isEmpty
           ? const Center(
@@ -34,12 +46,23 @@ class CartScreen extends StatelessWidget {
                             ? Image.network(product.imageUrl, width: 50, height: 50, fit: BoxFit.cover)
                             : const Icon(Icons.shopping_bag),
                         title: Text(product.name),
-                        subtitle: Text('₹${product.price.toStringAsFixed(2)}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.remove_circle),
-                          onPressed: () {
-                            cart.removeItem(product.id);
-                          },
+                        subtitle: Text('Quantity: ${product.quantity}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('₹${(product.price * product.quantity).toStringAsFixed(2)}'),
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline),
+                              onPressed: () {
+                                cart.removeSingleItem(product.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Removed 1 ${product.name} from cart!'),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -50,17 +73,16 @@ class CartScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'Total: ₹${cart.total.toStringAsFixed(2)}',
+                        'Total: ₹${cart.totalAmount.toStringAsFixed(2)}',
                         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () {
-                          // Navigate to the Checkout Screen
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => CheckoutScreen(),
+                              builder: (context) => const CheckoutScreen(),
                             ),
                           );
                         },

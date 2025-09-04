@@ -1,4 +1,3 @@
-// lib/screens/my_orders_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -54,7 +53,7 @@ class MyOrdersScreen extends StatelessWidget {
                   final orderDoc = orders[index];
                   final order = orderDoc.data() as Map<String, dynamic>;
                   final String status = order['status'] ?? 'N/A';
-                  final double total = (order['total'] as num).toDouble();
+                  final double total = (order['totalAmount'] as num? ?? 0.0).toDouble();
                   final bool isDelivery = order['isDelivery'] ?? false;
                   final List<dynamic> items = order['items'] ?? [];
                   
@@ -78,10 +77,20 @@ class MyOrdersScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               if (isDelivery)
-                                Text('Address: ${order['deliveryAddress']['address'] ?? 'N/A'}'),
-                              const SizedBox(height: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Address: ${order['deliveryAddress']['address'] ?? 'N/A'}'),
+                                    const SizedBox(height: 5),
+                                    Text('Remark: ${order['deliveryAddress']['remark'] ?? 'N/A'}'),
+                                    const SizedBox(height: 10),
+                                  ],
+                                ),
                               const Text('Items:', style: TextStyle(fontWeight: FontWeight.bold)),
-                              ...items.map((item) => Text(' - ${item['name']} (₹${(item['price'] as num).toDouble().toStringAsFixed(2)})')).toList(),
+                              ...items.map((item) {
+                                final double itemPrice = (item['price'] as num? ?? 0.0).toDouble();
+                                return Text(' - ${item['name']} (x${item['quantity']}) - ₹${itemPrice.toStringAsFixed(2)}');
+                              }).toList(),
                             ],
                           ),
                         ),

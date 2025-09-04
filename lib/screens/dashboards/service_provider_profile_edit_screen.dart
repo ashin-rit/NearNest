@@ -26,6 +26,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _streetAddressController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
@@ -41,6 +42,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     _nameController.text = widget.initialData['name'] ?? '';
     _emailController.text = widget.initialData['email'] ?? '';
     _phoneController.text = widget.initialData['phone'] ?? '';
+    _categoryController.text = widget.initialData['category'] ?? '';
     _streetAddressController.text = widget.initialData['streetAddress'] ?? '';
     _cityController.text = widget.initialData['city'] ?? '';
     _stateController.text = widget.initialData['state'] ?? '';
@@ -69,6 +71,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
         Placemark place = placemarks.first;
         _streetAddressController.text = place.street ?? '';
         _cityController.text = place.locality ?? '';
+        _categoryController.text = place.subAdministrativeArea ?? '';
         _stateController.text = place.administrativeArea ?? '';
         _pincodeController.text = place.postalCode ?? '';
         _latitude = position.latitude;
@@ -121,6 +124,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
           'name': _nameController.text,
           'email': _emailController.text,
           'phone': _phoneController.text,
+          'category': _categoryController.text,
           'streetAddress': _streetAddressController.text,
           'city': _cityController.text,
           'state': _stateController.text,
@@ -184,6 +188,7 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
                     _buildTextField(_nameController, 'Name'),
                     _buildTextField(_emailController, 'Email', keyboardType: TextInputType.emailAddress),
                     _buildTextField(_phoneController, 'Phone Number', keyboardType: TextInputType.phone),
+                    _buildTextField(_categoryController, 'Category'),
                     _buildTextField(_streetAddressController, 'Street Address'),
                     _buildTextField(_cityController, 'City'),
                     _buildTextField(_stateController, 'State'),
