@@ -244,10 +244,9 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> {
                             const SizedBox(height: 8),
                             StreamBuilder<QuerySnapshot>(
                               stream: _firestore
-                                  .collection('users')
-                                  .doc(itemId)
-                                  .collection('servicePackages')
-                                  .snapshots(),
+                          .collection('service_packages')
+                          .where('serviceProviderId', isEqualTo: itemId)
+                          .snapshots(),
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState == ConnectionState.waiting) {
                                   return const Center(child: CircularProgressIndicator());

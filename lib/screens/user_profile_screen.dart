@@ -85,11 +85,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Profile'),
-        backgroundColor: const Color(0xFF34D399),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit, color: Colors.white),
+            icon: const Icon(Icons.edit, color: Colors.black),
             onPressed: () async {
               await Navigator.of(context).push(
                 MaterialPageRoute(

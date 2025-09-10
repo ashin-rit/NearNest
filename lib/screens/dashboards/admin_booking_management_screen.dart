@@ -1,4 +1,3 @@
-// lib/screens/dashboards/admin_booking_management_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -23,181 +22,59 @@ class _AdminBookingManagementScreenState
     'Canceled',
   ];
 
-  @override
-  Widget build(BuildContext context) {
+  /// A stream that fetches all bookings and their associated user details
+  /// to avoid multiple nested FutureBuilders, improving performance.
+  Stream<List<Map<String, dynamic>>> _fetchBookingsWithDetails() {
     Query<Map<String, dynamic>> query =
         FirebaseFirestore.instance.collection('bookings');
 
     if (_selectedStatus != 'All') {
       query = query.where('status', isEqualTo: _selectedStatus);
     }
-    
+
     query = query.orderBy('bookingTime', descending: _sortAscending);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('All Bookings'),
-        backgroundColor: const Color(0xFFB91C1C),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _sortAscending
-                  ? Icons.arrow_upward
-                  : Icons.arrow_downward,
-            ),
-            onPressed: () {
-              setState(() {
-                _sortAscending = !_sortAscending;
-              });
-            },
-            tooltip: 'Sort by date',
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            color: Colors.grey[200],
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: _statusOptions.map((status) {
-                  final isSelected = _selectedStatus == status;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: ChoiceChip(
-                      label: Text(status),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedStatus = status;
-                        });
-                      },
-                      selectedColor: const Color(0xFFB91C1C),
-                      labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: query.snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No bookings found.'));
-                }
+    return query.snapshots().asyncMap((snapshot) async {
+      final List<Map<String, dynamic>> detailedBookings = [];
+      for (var bookingDoc in snapshot.docs) {
+        final bookingData = bookingDoc.data();
+        final String customerId = bookingData['userId'] ?? '';
+        final String serviceProviderId = bookingData['serviceProviderId'] ?? '';
 
-                final bookings = snapshot.data!.docs;
+        String customerName = 'Unknown Customer';
+        String serviceProviderName = 'Unknown Provider';
+        String serviceProviderCategory = 'N/A';
+        
+        // Fetch customer name
+        if (customerId.isNotEmpty) {
+          final customerDoc = await FirebaseFirestore.instance.collection('users').doc(customerId).get();
+          if (customerDoc.exists) {
+            customerName = customerDoc.data()?['name'] ?? 'N/A';
+          }
+        }
 
-                return ListView.builder(
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    final doc = bookings[index];
-                    final data = doc.data() as Map<String, dynamic>?;
-
-                    if (data == null) {
-                      return const SizedBox.shrink();
-                    }
-
-                    final String serviceName = data['serviceName'] ?? 'Unknown Service';
-                    final Timestamp bookingTime = data['bookingTime'] as Timestamp? ?? Timestamp.now();
-                    final String status = data['status'] ?? 'Pending';
-                    final String serviceProviderId = data['serviceProviderId'] ?? '';
-                    final String userId = data['userId'] ?? '';
-
-                    String details = 'N/A';
-                    if (status == 'Confirmed') {
-                      details = data['remarks'] ?? 'No remarks provided';
-                    } else if (status == 'Canceled') {
-                      details = data['cancellationReason'] ?? 'No reason provided';
-                    }
-
-                    return FutureBuilder<Map<String, String>>(
-                      future: _fetchNames(userId, serviceProviderId),
-                      builder: (context, nameSnapshot) {
-                        if (nameSnapshot.connectionState == ConnectionState.waiting) {
-                          return const ListTile(
-                            title: Text('Loading user details...'),
-                          );
-                        }
-                        if (nameSnapshot.hasError) {
-                          return ListTile(
-                            title: Text('Error loading names: ${nameSnapshot.error}'),
-                            subtitle: const Text('One or more user IDs are invalid.'),
-                          );
-                        }
-
-                        final names = nameSnapshot.data!;
-                        final customerName = names['customerName'] ?? 'Unknown Customer';
-                        final serviceProviderName = names['serviceProviderName'] ?? 'Unknown Provider';
-
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Service: $serviceName',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                                const SizedBox(height: 8),
-                                Text('Customer: $customerName'),
-                                Text('Service Provider: $serviceProviderName'),
-                                Text('Time: ${DateFormat('yyyy-MM-dd – kk:mm').format(bookingTime.toDate())}'),
-                                Text('Status: $status', style: TextStyle(color: _getStatusColor(status), fontWeight: FontWeight.bold)),
-                                Text('${status == 'Confirmed' ? 'Remarks' : 'Reason'}: $details'),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+        // Fetch service provider name and category
+        if (serviceProviderId.isNotEmpty) {
+          final providerDoc = await FirebaseFirestore.instance.collection('users').doc(serviceProviderId).get();
+          if (providerDoc.exists) {
+            serviceProviderName = providerDoc.data()?['name'] ?? 'N/A';
+            serviceProviderCategory = providerDoc.data()?['category'] ?? 'N/A';
+          }
+        }
+        
+        detailedBookings.add({
+          'id': bookingDoc.id,
+          ...bookingData,
+          'customerName': customerName,
+          'serviceProviderName': serviceProviderName,
+          'serviceProviderCategory': serviceProviderCategory,
+        });
+      }
+      return detailedBookings;
+    });
   }
 
-  Future<Map<String, String>> _fetchNames(String customerId, String serviceProviderId) async {
-    final Map<String, String> names = {};
-    
-    if (customerId.isNotEmpty) {
-      final customerDoc = await FirebaseFirestore.instance.collection('users').doc(customerId).get();
-      names['customerName'] = customerDoc.exists ? (customerDoc.data()?['name'] ?? 'N/A') : 'Unknown Customer';
-    } else {
-      names['customerName'] = 'Unknown Customer';
-    }
-
-    if (serviceProviderId.isNotEmpty) {
-      final serviceProviderDoc = await FirebaseFirestore.instance.collection('users').doc(serviceProviderId).get();
-      names['serviceProviderName'] = serviceProviderDoc.exists ? (serviceProviderDoc.data()?['name'] ?? 'N/A') : 'Unknown Provider';
-    } else {
-      names['serviceProviderName'] = 'Unknown Provider';
-    }
-
-    return names;
-  }
-
+  /// Determines the color of the status text.
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Confirmed':
@@ -207,5 +84,147 @@ class _AdminBookingManagementScreenState
       default:
         return Colors.orange;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('All Bookings'),
+        backgroundColor: const Color(0xFFB91C1C),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _sortAscending ? Icons.arrow_downward : Icons.arrow_upward,
+            ),
+            onPressed: () {
+              setState(() {
+                _sortAscending = !_sortAscending;
+              });
+            },
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Segmented Button for Status Filtering
+            SegmentedButton<String>(
+              segments: _statusOptions
+                  .map((status) => ButtonSegment<String>(
+                        value: status,
+                        label: Text(status),
+                      ))
+                  .toList(),
+              selected: {_selectedStatus},
+              onSelectionChanged: (Set<String> newSelection) {
+                setState(() {
+                  _selectedStatus = newSelection.first;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: _fetchBookingsWithDetails(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text('No bookings found.'));
+                  }
+                  final detailedBookings = snapshot.data!;
+                  return ListView.builder(
+                    itemCount: detailedBookings.length,
+                    itemBuilder: (context, index) {
+                      final booking = detailedBookings[index];
+                      final String bookingId = booking['id'];
+                      final String? serviceName = booking['serviceName'];
+                      final double? servicePrice = (booking['servicePrice'] as num?)?.toDouble();
+                      final String? status = booking['status'];
+                      final String? remarks = booking['remarks'];
+                      final String? cancelReason = booking['cancellationReason'];
+                      final Timestamp? bookingTime = booking['bookingTime'];
+                      final String customerName = booking['customerName'];
+                      final String serviceProviderName = booking['serviceProviderName'];
+                      final String serviceProviderCategory = booking['serviceProviderCategory'];
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Booking ID at the top
+                              Text(
+                                'Booking ID: $bookingId',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Service Category
+                              Text(
+                                'Service: $serviceProviderCategory',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+
+                              // Customer Name
+                              Text(
+                                'Customer: $customerName',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+
+                              // Service Provider Name
+                              Text(
+                                'Service Provider: $serviceProviderName',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Service Name and Price
+                              Text(
+                                'Service Name: $serviceName - ₹${servicePrice?.toStringAsFixed(2) ?? 'N/A'}',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+
+                              // Time
+                              Text(
+                                'Time: ${bookingTime != null ? DateFormat('dd MMM yyyy hh:mm a').format(bookingTime.toDate()) : 'N/A'}',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+
+                              // Status
+                              Text(
+                                'Status: $status',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _getStatusColor(status ?? ''),
+                                ),
+                              ),
+
+                              // Remarks / Cancellation Reason
+                              if (status == 'Confirmed' && remarks != null && remarks.isNotEmpty)
+                                Text('Remarks: $remarks'),
+                              if (status == 'Canceled' && cancelReason != null && cancelReason.isNotEmpty)
+                                Text('Cancellation Reason: $cancelReason'),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

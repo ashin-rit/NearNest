@@ -17,7 +17,10 @@ class ServiceProviderBookingsScreen extends StatefulWidget {
 class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsScreen> {
   final BookingService _bookingService = BookingService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  String _selectedStatus = 'All'; // Default to 'All' status
+  String _selectedStatus = 'All';
+  bool _sortAscending = true;
+  final TextEditingController _remarksController = TextEditingController();
+  final TextEditingController _cancelReasonController = TextEditingController();
 
   final List<String> _statusOptions = [
     'All',
@@ -26,68 +29,130 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
     'Canceled',
   ];
 
+  @override
+  void dispose() {
+    _remarksController.dispose();
+    _cancelReasonController.dispose();
+    super.dispose();
+  }
+
   Future<void> _updateBookingStatus(String bookingId, String newStatus, {String? cancellationReason, String? remarks}) async {
     try {
-      await _bookingService.updateBookingStatus(bookingId, newStatus, cancellationReason: cancellationReason, remarks: remarks);
-      if (newStatus == 'Confirmed') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking confirmed successfully!')),
-        );
-      } else if (newStatus == 'Canceled') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking canceled successfully.')),
-        );
+      final updateData = <String, dynamic>{'status': newStatus};
+      if (remarks != null) {
+        updateData['remarks'] = remarks;
       }
+      if (cancellationReason != null) {
+        updateData['cancellationReason'] = cancellationReason;
+      }
+
+      await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(bookingId)
+          .update(updateData);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Booking status updated to $newStatus!'),
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update booking status: $e')),
+        SnackBar(
+          content: Text('Failed to update booking status: $e'),
+        ),
       );
     }
   }
 
-  Future<void> _showCancellationDialog(String bookingId) async {
-    final TextEditingController reasonController = TextEditingController();
-    return showDialog<void>(
+  void _showBookingActionDialog(
+      BuildContext context, String bookingId, String status, String? currentRemarks) {
+    if (status == 'Pending') {
+      _remarksController.text = currentRemarks ?? '';
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Pending Booking Actions'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _remarksController,
+                    decoration: const InputDecoration(
+                      labelText: 'Add remarks for customer',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      _updateBookingStatus(bookingId, 'Confirmed', remarks: _remarksController.text);
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Confirm Booking'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _showCancelDialog(context, bookingId);
+                    },
+                    child: const Text('Cancel Booking', style: TextStyle(color: Colors.red)),
+                  ),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Close'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  void _showCancelDialog(BuildContext context, String bookingId) {
+    _cancelReasonController.clear();
+    showDialog(
       context: context,
-      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Cancel Booking'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                const Text('Please provide a reason for the cancellation.'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: reasonController,
-                  decoration: const InputDecoration(
-                    labelText: 'Reason',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
+          content: TextField(
+            controller: _cancelReasonController,
+            decoration: const InputDecoration(
+              labelText: 'Reason for cancellation',
+              border: OutlineInputBorder(),
             ),
+            maxLines: 3,
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Go Back'),
+              child: const Text('Back'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             ElevatedButton(
-              child: const Text('Cancel Booking'),
               onPressed: () {
-                if (reasonController.text.isNotEmpty) {
-                  _updateBookingStatus(bookingId, 'Canceled', cancellationReason: reasonController.text);
+                if (_cancelReasonController.text.isNotEmpty) {
+                  _updateBookingStatus(bookingId, 'Canceled', cancellationReason: _cancelReasonController.text);
                   Navigator.of(context).pop();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cancellation reason cannot be empty.')),
+                    const SnackBar(content: Text('Please enter a cancellation reason.')),
                   );
                 }
               },
+              child: const Text('Confirm Cancellation', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -95,48 +160,24 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
     );
   }
 
-  Future<void> _showConfirmationDialog(String bookingId) async {
-    final TextEditingController remarksController = TextEditingController();
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirm Booking'),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                const Text('Please provide any remarks for the customer (optional).'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: remarksController,
-                  decoration: const InputDecoration(
-                    labelText: 'Remarks',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Go Back'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              child: const Text('Confirm Booking'),
-              onPressed: () {
-                _updateBookingStatus(bookingId, 'Confirmed', remarks: remarksController.text);
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+  Future<String> _fetchCustomerName(String userId) async {
+    if (userId.isNotEmpty) {
+      final customerDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      return customerDoc.exists ? (customerDoc.data()?['name'] ?? 'N/A') : 'Unknown Customer';
+    } else {
+      return 'Unknown Customer';
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Confirmed':
+        return Colors.green;
+      case 'Canceled':
+        return Colors.red;
+      default:
+        return Colors.orange;
+    }
   }
 
   @override
@@ -150,43 +191,61 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
       );
     }
 
-    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection('bookings')
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+        .collection('bookings')
         .where('serviceProviderId', isEqualTo: serviceProviderId);
 
     if (_selectedStatus != 'All') {
       query = query.where('status', isEqualTo: _selectedStatus);
     }
 
+    query = query.orderBy('bookingTime', descending: _sortAscending);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Bookings'),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: const Color.fromARGB(255, 230, 230, 230),
+        elevation: 1,
+        actions: [
+          IconButton(
+            icon: Icon(_sortAscending
+                ? Icons.arrow_upward_rounded
+                : Icons.arrow_downward_rounded),
+            onPressed: () {
+              setState(() {
+                _sortAscending = !_sortAscending;
+              });
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
-          Container(
-            color: Colors.grey[200],
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+          // Horizontally scrollable row of filter tiles
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: _statusOptions.map((status) {
-                  final isSelected = _selectedStatus == status;
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4.0),
                     child: ChoiceChip(
                       label: Text(status),
-                      selected: isSelected,
+                      selected: _selectedStatus == status,
                       onSelected: (selected) {
                         setState(() {
                           _selectedStatus = status;
                         });
                       },
-                      selectedColor: Theme.of(context).primaryColor,
-                      labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.bold,
+                      selectedColor: _getStatusColor(status).withOpacity(0.5),
+                      backgroundColor: Colors.grey.withOpacity(0.2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.0),
+                        side: BorderSide(
+                          color: _selectedStatus == status ? _getStatusColor(status) : Colors.transparent,
+                        ),
                       ),
                     ),
                   );
@@ -213,83 +272,79 @@ class _ServiceProviderBookingsScreenState extends State<ServiceProviderBookingsS
                 return ListView.builder(
                   itemCount: bookings.length,
                   itemBuilder: (context, index) {
-                    final doc = bookings[index];
-                    final data = doc.data() as Map<String, dynamic>?;
+                    final booking = bookings[index].data() as Map<String, dynamic>;
+                    final String bookingId = bookings[index].id;
+                    final String status = booking['status'] ?? 'Unknown';
+                    final String userId = booking['userId'] ?? 'Unknown';
+                    final Timestamp bookingTime = booking['bookingTime'];
+                    final String serviceName = booking['serviceName'] ?? 'Unknown Service';
+                    final String? taskDescription = booking['taskDescription'];
+                    final String? remarks = booking['remarks'];
+                    final String? cancelReason = booking['cancellationReason'];
 
-                    if (data == null) {
-                      return const SizedBox.shrink();
-                    }
-
-                    final booking = Booking.fromMap(data);
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Service: ${booking.serviceName}',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Date: ${DateFormat('yyyy-MM-dd – kk:mm').format(booking.bookingTime.toDate())}',
-                            ),
-                            const SizedBox(height: 8),
-                            if (booking.taskDescription != null && booking.taskDescription!.isNotEmpty)
-                              Text(
-                                'Task: ${booking.taskDescription}',
-                                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[700]),
-                              ),
-                            const SizedBox(height: 8),
-                            FutureBuilder<DocumentSnapshot>(
-                              future: AuthService().getUserDataByUid(booking.userId),
-                              builder: (context, userSnapshot) {
-                                if (userSnapshot.connectionState == ConnectionState.waiting) {
-                                  return const Text('Customer: Loading...');
-                                }
-                                if (userSnapshot.hasError || !userSnapshot.hasData || !userSnapshot.data!.exists) {
-                                  return const Text('Customer: Not Found');
-                                }
-                                final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                                return Text(
-                                  'Customer: ${userData['name'] ?? 'N/A'}',
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                const Text('Status: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(booking.status),
-                                const Spacer(),
-                                if (booking.status == 'Pending') ...[
-                                  ElevatedButton(
-                                    onPressed: () => _showConfirmationDialog(booking.id),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                    ),
-                                    child: const Text('Confirm'),
+                    return FutureBuilder<String>(
+                      future: _fetchCustomerName(userId),
+                      builder: (context, customerSnapshot) {
+                        final customerName = customerSnapshot.data ?? 'Fetching...';
+                        return InkWell(
+                          onTap: () {
+                            if (status == 'Pending') {
+                              _showBookingActionDialog(context, bookingId, status, remarks);
+                            }
+                          },
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 16.0, vertical: 8.0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Booking ID: $bookingId',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Colors.grey),
                                   ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton(
-                                    onPressed: () => _showCancellationDialog(booking.id),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                    ),
-                                    child: const Text('Cancel'),
+                                  const SizedBox(height: 8),
+                                  Text('Customer: $customerName'),
+                                  Text(
+                                      'Time: ${DateFormat('yyyy-MM-dd  kk:mm').format(bookingTime.toDate())}'),
+                                  Text('Status: $status',
+                                      style: TextStyle(
+                                          color: _getStatusColor(status),
+                                          fontWeight: FontWeight.bold)),
+                                  if (remarks != null && remarks.isNotEmpty)
+                                    Text('Remarks: $remarks',
+                                      style: const TextStyle(fontStyle: FontStyle.italic)),
+                                  if (cancelReason != null && cancelReason.isNotEmpty)
+                                    Text('Reason: $cancelReason',
+                                      style: const TextStyle(fontStyle: FontStyle.italic)),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Service Details:',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blueGrey),
                                   ),
+                                  Text(
+                                    'Service: $serviceName',
+                                    style: const TextStyle(
+                                        fontStyle: FontStyle.italic),
+                                  ),
+                                  if (taskDescription != null && taskDescription.isNotEmpty)
+                                    Text(
+                                      'Task: $taskDescription',
+                                      style: const TextStyle(
+                                          fontStyle: FontStyle.italic),
+                                    ),
                                 ],
-                              ],
+                              ),
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );

@@ -17,12 +17,14 @@ class ServicePackage {
 
   // Factory constructor to create a ServicePackage object from a Firestore document
   factory ServicePackage.fromMap(Map<String, dynamic> data, {required String id}) {
+    // We add the null-aware operator (??) to provide a default value
+    // in case the Firestore data is null or missing.
     return ServicePackage(
       id: id,
-      name: data['name'] as String,
-      description: data['description'] as String,
-      price: (data['price'] as num).toDouble(),
-      durationInMinutes: data['durationInMinutes'] as int,
+      name: data['name'] as String? ?? 'Unnamed Package',
+      description: data['description'] as String? ?? 'No description available.',
+      price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      durationInMinutes: data['durationInMinutes'] as int? ?? 0,
     );
   }
 

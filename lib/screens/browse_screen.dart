@@ -27,6 +27,10 @@ class _BrowseScreenState extends State<BrowseScreen> {
   final Map<String, int?> _minRatings = {'Shop': null, 'Services': null};
   final Map<String, double> _maxDistances = {'Shop': 100, 'Services': 100};
   final Map<String, bool> _isDeliveryFilterOn = {'Shop': false, 'Services': false};
+  
+  // Dynamic categories loaded from Firestore
+  final Map<String, List<String>> _dynamicCategories = {'Shop': [], 'Services': []};
+  final Map<String, bool> _categoriesLoaded = {'Shop': false, 'Services': false};
 
   @override
   void initState() {
@@ -42,6 +46,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
       });
     });
     _fetchUserData();
+    _loadCategories('Shop');
+    _loadCategories('Services');
   }
 
   Future<void> _fetchUserData() async {
@@ -67,6 +73,38 @@ class _BrowseScreenState extends State<BrowseScreen> {
     } else {
       setState(() {
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadCategories(String role) async {
+    try {
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: role)
+          .get();
+
+      final Set<String> uniqueCategories = {};
+      for (var doc in usersSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final category = data['category'] as String?;
+        if (category != null && category.isNotEmpty) {
+          uniqueCategories.add(category);
+        }
+      }
+      
+      setState(() {
+        _dynamicCategories[role] = uniqueCategories.toList()..sort();
+        _categoriesLoaded[role] = true;
+      });
+    } catch (e) {
+      print('Error loading categories for $role: $e');
+      // Fallback to hardcoded categories if there's an error
+      setState(() {
+        _dynamicCategories[role] = role == 'Shop'
+            ? ['Groceries', 'Electronics', 'Food', 'Retail']
+            : ['Plumbing', 'Haircut', 'Consulting', 'Repair'];
+        _categoriesLoaded[role] = true;
       });
     }
   }
@@ -319,10 +357,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter modalSetState) {
-            List<String> categories = currentRole == 'Shop'
-                ? ['Groceries', 'Electronics', 'Food', 'Retail']
-                : ['Plumbing', 'Haircut', 'Consulting', 'Repair'];
-
+            // Use dynamic categories if loaded, otherwise show loading or empty state
+            final categories = _dynamicCategories[currentRole] ?? [];
             final selectedCategory = _selectedCategories[currentRole];
 
             return Dialog(
@@ -339,34 +375,39 @@ class _BrowseScreenState extends State<BrowseScreen> {
                     ),
                     const Divider(),
                     const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 4.0,
-                      children: [
-                        FilterChip(
-                          label: const Text('All'),
-                          selected: selectedCategory == null,
-                          onSelected: (bool selected) {
-                            modalSetState(() {
-                              _selectedCategories[currentRole] = null;
-                              Navigator.pop(context);
-                              setState(() {});
-                            });
-                          },
-                        ),
-                        ...categories.map((category) => FilterChip(
-                          label: Text(category),
-                          selected: selectedCategory == category,
-                          onSelected: (bool selected) {
-                            modalSetState(() {
-                              _selectedCategories[currentRole] = selected ? category : null;
-                              Navigator.pop(context);
-                              setState(() {});
-                            });
-                          },
-                        )).toList(),
-                      ],
-                    ),
+                    if (!_categoriesLoaded[currentRole]!)
+                      const Center(child: CircularProgressIndicator())
+                    else if (categories.isEmpty)
+                      const Center(child: Text('No categories available'))
+                    else
+                      Wrap(
+                        spacing: 8.0,
+                        runSpacing: 4.0,
+                        children: [
+                          FilterChip(
+                            label: const Text('All'),
+                            selected: selectedCategory == null,
+                            onSelected: (bool selected) {
+                              modalSetState(() {
+                                _selectedCategories[currentRole] = null;
+                                Navigator.pop(context);
+                                setState(() {});
+                              });
+                            },
+                          ),
+                          ...categories.map((category) => FilterChip(
+                            label: Text(category),
+                            selected: selectedCategory == category,
+                            onSelected: (bool selected) {
+                              modalSetState(() {
+                                _selectedCategories[currentRole] = selected ? category : null;
+                                Navigator.pop(context);
+                                setState(() {});
+                              });
+                            },
+                          )).toList(),
+                        ],
+                      ),
                   ],
                 ),
               ),

@@ -1,48 +1,58 @@
-// lib/models/order_model.dart
+// models/order_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:nearnest/models/cart_item_model.dart'; // Changed to use CartItem
-import 'package:nearnest/models/product_model.dart';
+import 'package:nearnest/models/cart_item_model.dart';
 
 class Order {
   final String id;
   final String userId;
-  final String shopId;
-  final List<CartItem> items; // Changed to use CartItem
+  final List<CartItem> items;
   final double total;
   final bool isDelivery;
-  final Map<String, dynamic>? deliveryAddress;
-  final String? remarks; // Added remarks field
+  final String shopId;
+  final String remarks;
   final Timestamp orderDate;
   final String status;
 
   Order({
     required this.id,
     required this.userId,
-    required this.shopId,
     required this.items,
     required this.total,
     required this.isDelivery,
-    this.deliveryAddress,
-    this.remarks, // Added to constructor
+    required this.shopId,
+    this.remarks = '',
     required this.orderDate,
     required this.status,
   });
 
+  factory Order.fromMap(Map<String, dynamic> data, {required String id}) {
+    // This part is crucial for reading from Firestore
+    final List<CartItem> items = (data['items'] as List)
+        .map((item) => CartItem.fromMap(item as Map<String, dynamic>))
+        .toList();
+
+    return Order(
+      id: id,
+      userId: data['userId'] as String,
+      items: items,
+      total: (data['total'] as num).toDouble(),
+      isDelivery: data['isDelivery'] as bool,
+      shopId: data['shopId'] as String,
+      remarks: data['remarks'] as String? ?? '',
+      orderDate: data['orderDate'] as Timestamp,
+      status: data['status'] as String,
+    );
+  }
+
   Map<String, dynamic> toMap() {
+    // This part is crucial for writing to Firestore
     return {
       'userId': userId,
-      'shopId': shopId,
-      'items': items.map((item) => {
-            'id': item.id,
-            'name': item.name,
-            'price': item.price,
-            'quantity': item.quantity,
-            'imageUrl': item.imageUrl,
-          }).toList(),
+      'items': items.map((item) => item.toMap()).toList(),
       'total': total,
       'isDelivery': isDelivery,
-      'deliveryAddress': deliveryAddress,
-      'remarks': remarks, // Added to map
+      'shopId': shopId,
+      'remarks': remarks,
       'orderDate': orderDate,
       'status': status,
     };

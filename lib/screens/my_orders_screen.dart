@@ -1,9 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class MyOrdersScreen extends StatelessWidget {
   const MyOrdersScreen({super.key});
+
+  /// Fetches the shop's name using its shopId.
+  Future<String> _fetchShopName(String shopId) async {
+    try {
+      final shopDoc = await FirebaseFirestore.instance.collection('users').doc(shopId).get();
+      if (shopDoc.exists) {
+        return shopDoc.data()?['name'] ?? 'Unknown Shop';
+      }
+      return 'Unknown Shop';
+    } catch (e) {
+      print('Error fetching shop name: $e');
+      return 'Unknown Shop';
+    }
+  }
+
+  /// Determines the color of the status text based on the order's status.
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Confirmed':
+        return Colors.green;
+      case 'Canceled':
+        return Colors.red;
+      case 'Delivered':
+        return Colors.blue;
+      case 'Picked Up':
+        return Colors.purple;
+      default:
+        return Colors.orange;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +49,6 @@ class MyOrdersScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'My Orders',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
           const SizedBox(height: 16),
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
@@ -53,48 +76,87 @@ class MyOrdersScreen extends StatelessWidget {
                   final orderDoc = orders[index];
                   final order = orderDoc.data() as Map<String, dynamic>;
                   final String status = order['status'] ?? 'N/A';
-                  final double total = (order['totalAmount'] as num? ?? 0.0).toDouble();
                   final bool isDelivery = order['isDelivery'] ?? false;
                   final List<dynamic> items = order['items'] ?? [];
-                  
+                  final String shopId = order['shopId'] ?? '';
+                  final Timestamp? orderTimestamp = order['orderDate'];
+
                   return Card(
                     elevation: 4,
                     margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: ExpansionTile(
-                      title: Text('Order ID: ${orderDoc.id}'),
-                      subtitle: Column(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Status: $status'),
-                          Text('Total: ₹${total.toStringAsFixed(2)}'),
-                          Text(isDelivery ? 'Type: Delivery' : 'Type: Pickup'),
+                          FutureBuilder<String>(
+                            future: _fetchShopName(shopId),
+                            builder: (context, shopNameSnapshot) {
+                              if (shopNameSnapshot.connectionState == ConnectionState.waiting) {
+                                return const Text('Loading shop...');
+                              }
+                              return Text(
+                                shopNameSnapshot.data ?? 'Unknown Shop',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          if (orderTimestamp != null) ...[
+                            Text(
+                              'Date: ${DateFormat('MMM d, yyyy').format(orderTimestamp.toDate())}',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                  
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Time: ${DateFormat('h:mm a').format(orderTimestamp.toDate())}',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          Text('Status: $status', style: TextStyle(color: _getStatusColor(status), fontWeight: FontWeight.bold)),
+                          Text('Type: ${isDelivery ? 'Delivery' : 'Pickup'}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 10),
+                          const Text('Items:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 10),
+                          ...items.map((item) {
+                            final double itemPrice = (item['price'] as num? ?? 0.0).toDouble();
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: Row(
+                                children: [
+                                  if (item['imageUrl'] != null && item['imageUrl']!.isNotEmpty)
+                                    SizedBox(
+                                      width: 50,
+                                      height: 50,
+                                      child: Image.network(
+                                        item['imageUrl'],
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return const Icon(Icons.image_not_supported, size: 50);
+                                        },
+                                      ),
+                                    )
+                                  else
+                                    const Icon(Icons.shopping_bag_outlined, size: 50),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(item['name'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        Text('Quantity: ${item['quantity'] ?? 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        Text('Price: ₹${itemPrice.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ],
                       ),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (isDelivery)
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Address: ${order['deliveryAddress']['address'] ?? 'N/A'}'),
-                                    const SizedBox(height: 5),
-                                    Text('Remark: ${order['deliveryAddress']['remark'] ?? 'N/A'}'),
-                                    const SizedBox(height: 10),
-                                  ],
-                                ),
-                              const Text('Items:', style: TextStyle(fontWeight: FontWeight.bold)),
-                              ...items.map((item) {
-                                final double itemPrice = (item['price'] as num? ?? 0.0).toDouble();
-                                return Text(' - ${item['name']} (x${item['quantity']}) - ₹${itemPrice.toStringAsFixed(2)}');
-                              }).toList(),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
                   );
                 },
