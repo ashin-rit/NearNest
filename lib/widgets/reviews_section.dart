@@ -1,4 +1,4 @@
-// lib/widgets/reviews_section.dart
+// lib/widgets/reviews_section.dart - Updated with business response display
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -55,7 +55,6 @@ class _ReviewsSectionState extends State<ReviewsSection>
     super.dispose();
   }
 
-  // Helper method to get safe rating value
   double _getSafeRating(double rating) {
     if (rating.isNaN || rating.isInfinite) return 0.0;
     return rating.clamp(0.0, 5.0);
@@ -433,7 +432,7 @@ class _ReviewsSectionState extends State<ReviewsSection>
                       children: [
                         Expanded(
                           child: Text(
-                            review.userName ?? 'Anonymous', // Changed from review.userId
+                            review.userName ?? 'Anonymous',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -500,6 +499,8 @@ class _ReviewsSectionState extends State<ReviewsSection>
               if (isUserReview) _buildUserActions(review, reviewsService),
             ],
           ),
+          
+          // Customer Review Content
           if (review.comment != null && review.comment!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Container(
@@ -540,6 +541,69 @@ class _ReviewsSectionState extends State<ReviewsSection>
                       fontSize: 13,
                       fontStyle: FontStyle.italic,
                       color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Business Response Section (NEW)
+          if (review.hasResponse) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(
+                          Icons.business_rounded,
+                          color: Color(0xFF10B981),
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Response from ${review.respondedBy ?? 'Business'}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                      ),
+                      if (review.responseDate != null)
+                        Text(
+                          DateFormat('MMM d, yyyy').format(review.responseDate!.toDate()),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    review.businessResponse!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF374151),
+                      height: 1.4,
                     ),
                   ),
                 ],

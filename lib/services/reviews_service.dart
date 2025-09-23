@@ -1,4 +1,4 @@
-// lib/services/reviews_service.dart - FIXED VERSION
+// lib/services/reviews_service.dart - Enhanced version with response support
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nearnest/models/review.dart';
@@ -17,9 +17,7 @@ class ReviewsService {
       throw Exception('User is not logged in.');
     }
 
-    // FIXED: Create unique document ID for each user+business combination
-    final reviewDocId = '${user.uid}_$itemId';  // e.g., "user123_shop456"
-    
+    final reviewDocId = '${user.uid}_$itemId';
     final reviewDocRef = _firestore.collection('reviews').doc(reviewDocId);
     final itemDocRef = _firestore.collection('users').doc(itemId);
 
@@ -33,29 +31,25 @@ class ReviewsService {
       double newRatingSum = (itemSnapshot.data()?['ratingSum'] ?? 0.0).toDouble();
       int newReviewCount = (itemSnapshot.data()?['reviewCount'] ?? 0);
 
-      // Handle existing review update
       if (reviewSnapshot.exists) {
         final oldRating = (reviewSnapshot.data()?['rating'] ?? 0).toDouble();
         newRatingSum = newRatingSum - oldRating + rating;
       } else {
-        // New review
         newReviewCount++;
         newRatingSum += rating;
       }
 
-      // Ensure values are valid
       newRatingSum = newRatingSum < 0 ? 0 : newRatingSum;
       newReviewCount = newReviewCount < 0 ? 0 : newReviewCount;
 
-      // Calculate safe average rating
       double newAverageRating = 0.0;
       if (newReviewCount > 0 && newRatingSum > 0) {
         newAverageRating = newRatingSum / newReviewCount;
         newAverageRating = newAverageRating.clamp(0.0, 5.0);
       }
 
-      // Save review
-      transaction.set(reviewDocRef, {
+      // Preserve existing response data when updating review
+      Map<String, dynamic> reviewData = {
         'itemId': itemId,
         'userId': user.uid,
         'userName': userName,
@@ -65,9 +59,20 @@ class ReviewsService {
             ? reviewSnapshot.data()!['createdAt']
             : FieldValue.serverTimestamp(),
         'lastUpdated': FieldValue.serverTimestamp(),
-      });
+      };
 
-      // Update item with safe values
+      // Preserve existing business response if it exists
+      if (reviewSnapshot.exists) {
+        final existingData = reviewSnapshot.data()!;
+        if (existingData['businessResponse'] != null) {
+          reviewData['businessResponse'] = existingData['businessResponse'];
+          reviewData['responseDate'] = existingData['responseDate'];
+          reviewData['respondedBy'] = existingData['respondedBy'];
+        }
+      }
+
+      transaction.set(reviewDocRef, reviewData);
+
       transaction.update(itemDocRef, {
         'averageRating': newAverageRating,
         'ratingSum': newRatingSum,
@@ -85,9 +90,7 @@ class ReviewsService {
       throw Exception('User is not logged in.');
     }
 
-    // FIXED: Use same unique document ID format
     final reviewDocId = '${user.uid}_$itemId';
-    
     final reviewDocRef = _firestore.collection('reviews').doc(reviewDocId);
     final itemDocRef = _firestore.collection('users').doc(itemId);
 
@@ -97,7 +100,6 @@ class ReviewsService {
       double currentRatingSum = (itemSnapshot.data()?['ratingSum'] ?? 0.0).toDouble();
       int currentReviewCount = (itemSnapshot.data()?['reviewCount'] ?? 0);
 
-      // Calculate new values
       double newRatingSum = (currentRatingSum - rating).clamp(0.0, double.maxFinite);
       int newReviewCount = (currentReviewCount - 1).clamp(0, 999999);
 
@@ -122,7 +124,69 @@ class ReviewsService {
     });
   }
 
-  // FIXED: Get user's specific review for a business
+  // NEW: Add business response to a review
+  Future<void> addBusinessResponse({
+    required String itemId,
+    required String customerId,
+    required String response,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User is not logged in.');
+    }
+
+    // Verify that the current user is the business owner
+    final businessDoc = await _firestore.collection('users').doc(itemId).get();
+    if (!businessDoc.exists || businessDoc.id != user.uid) {
+      throw Exception('You are not authorized to respond to this review.');
+    }
+
+    final businessData = businessDoc.data()!;
+    final businessName = businessData['name'] ?? 'Business Owner';
+
+    final reviewDocId = '${customerId}_$itemId';
+    final reviewDocRef = _firestore.collection('reviews').doc(reviewDocId);
+
+    await reviewDocRef.update({
+      'businessResponse': response,
+      'responseDate': FieldValue.serverTimestamp(),
+      'respondedBy': businessName,
+    });
+  }
+
+  // NEW: Update business response
+  Future<void> updateBusinessResponse({
+    required String itemId,
+    required String customerId,
+    required String response,
+  }) async {
+    await addBusinessResponse(
+      itemId: itemId,
+      customerId: customerId,
+      response: response,
+    );
+  }
+
+  // NEW: Delete business response
+  Future<void> deleteBusinessResponse({
+    required String itemId,
+    required String customerId,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User is not logged in.');
+    }
+
+    final reviewDocId = '${customerId}_$itemId';
+    final reviewDocRef = _firestore.collection('reviews').doc(reviewDocId);
+
+    await reviewDocRef.update({
+      'businessResponse': FieldValue.delete(),
+      'responseDate': FieldValue.delete(),
+      'respondedBy': FieldValue.delete(),
+    });
+  }
+
   Future<Review?> getUserReviewForItem(String itemId) async {
     final user = _auth.currentUser;
     if (user == null) return null;
@@ -145,5 +209,80 @@ class ReviewsService {
         .collection('reviews')
         .where('itemId', isEqualTo: itemId)
         .snapshots();
+  }
+
+  // NEW: Get reviews for business owner to manage
+  Stream<QuerySnapshot> getBusinessReviews(String businessId) {
+    return _firestore
+        .collection('reviews')
+        .where('itemId', isEqualTo: businessId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  // NEW: Get review statistics for business
+  Future<Map<String, dynamic>> getBusinessReviewStats(String businessId) async {
+    try {
+      final reviewsSnapshot = await _firestore
+          .collection('reviews')
+          .where('itemId', isEqualTo: businessId)
+          .get();
+
+      final reviews = reviewsSnapshot.docs.map((doc) => Review.fromMap(doc.data())).toList();
+      
+      final totalReviews = reviews.length;
+      if (totalReviews == 0) {
+        return {
+          'totalReviews': 0,
+          'averageRating': 0.0,
+          'ratingDistribution': {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0},
+          'responseRate': 0.0,
+          'recentReviews': 0,
+        };
+      }
+
+      double totalRating = 0;
+      int responsedReviews = 0;
+      int recentReviews = 0;
+      Map<String, int> ratingDistribution = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0};
+
+      final oneWeekAgo = DateTime.now().subtract(const Duration(days: 7));
+
+      for (final review in reviews) {
+        totalRating += review.rating;
+        
+        // Count responses
+        if (review.hasResponse) {
+          responsedReviews++;
+        }
+        
+        // Count recent reviews
+        if (review.createdAt.toDate().isAfter(oneWeekAgo)) {
+          recentReviews++;
+        }
+        
+        // Rating distribution
+        final rating = review.rating.round().toString();
+        ratingDistribution[rating] = (ratingDistribution[rating] ?? 0) + 1;
+      }
+
+      return {
+        'totalReviews': totalReviews,
+        'averageRating': totalRating / totalReviews,
+        'ratingDistribution': ratingDistribution,
+        'responseRate': totalReviews > 0 ? (responsedReviews / totalReviews) * 100 : 0.0,
+        'recentReviews': recentReviews,
+        'respondedReviews': responsedReviews,
+      };
+    } catch (e) {
+      return {
+        'totalReviews': 0,
+        'averageRating': 0.0,
+        'ratingDistribution': {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0},
+        'responseRate': 0.0,
+        'recentReviews': 0,
+        'respondedReviews': 0,
+      };
+    }
   }
 }

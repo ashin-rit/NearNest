@@ -8,6 +8,7 @@ import 'package:nearnest/screens/dashboards/analytics_dashboard.dart';
 import 'package:nearnest/screens/dashboards/admin_booking_management_screen.dart';
 import 'package:nearnest/screens/dashboards/admin_notification_screen.dart';
 import 'package:nearnest/screens/dashboards/admin_order_management_screen.dart';
+import 'package:nearnest/screens/admin_user_location_dashboard.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -72,10 +73,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF6366F1),
-                        Color(0xFF8B5CF6),
-                      ],
+                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
                     ),
                   ),
                 ),
@@ -108,7 +106,9 @@ class _AdminDashboardState extends State<AdminDashboard>
             // Content
             SliverToBoxAdapter(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('users').snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
@@ -129,14 +129,18 @@ class _AdminDashboardState extends State<AdminDashboard>
 
                   final allUsers = snapshot.data!.docs;
                   final int totalUsers = allUsers.length;
-                  final int customerCount =
-                      allUsers.where((doc) => doc['role'] == 'Customer').length;
-                  final int shopCount =
-                      allUsers.where((doc) => doc['role'] == 'Shop').length;
-                  final int serviceProviderCount =
-                      allUsers.where((doc) => doc['role'] == 'Services').length;
-                  final int adminCount =
-                      allUsers.where((doc) => doc['role'] == 'Admin').length;
+                  final int customerCount = allUsers
+                      .where((doc) => doc['role'] == 'Customer')
+                      .length;
+                  final int shopCount = allUsers
+                      .where((doc) => doc['role'] == 'Shop')
+                      .length;
+                  final int serviceProviderCount = allUsers
+                      .where((doc) => doc['role'] == 'Services')
+                      .length;
+                  final int adminCount = allUsers
+                      .where((doc) => doc['role'] == 'Admin')
+                      .length;
 
                   return FadeTransition(
                     opacity: _fadeController,
@@ -147,26 +151,34 @@ class _AdminDashboardState extends State<AdminDashboard>
                         children: [
                           // Welcome Section
                           SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(-1, 0),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: _slideController,
-                              curve: Curves.easeOutCubic,
-                            )),
+                            position:
+                                Tween<Offset>(
+                                  begin: const Offset(-1, 0),
+                                  end: Offset.zero,
+                                ).animate(
+                                  CurvedAnimation(
+                                    parent: _slideController,
+                                    curve: Curves.easeOutCubic,
+                                  ),
+                                ),
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                                  colors: [
+                                    Color(0xFF6366F1),
+                                    Color(0xFF8B5CF6),
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF6366F1).withOpacity(0.3),
+                                    color: const Color(
+                                      0xFF6366F1,
+                                    ).withOpacity(0.3),
                                     blurRadius: 20,
                                     offset: const Offset(0, 10),
                                   ),
@@ -196,16 +208,23 @@ class _AdminDashboardState extends State<AdminDashboard>
                             ),
                           ),
                           const SizedBox(height: 30),
-                          
+
                           // Statistics Grid
                           SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.5),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: _slideController,
-                              curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-                            )),
+                            position:
+                                Tween<Offset>(
+                                  begin: const Offset(0, 0.5),
+                                  end: Offset.zero,
+                                ).animate(
+                                  CurvedAnimation(
+                                    parent: _slideController,
+                                    curve: const Interval(
+                                      0.2,
+                                      1.0,
+                                      curve: Curves.easeOutCubic,
+                                    ),
+                                  ),
+                                ),
                             child: GridView.count(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
@@ -219,7 +238,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   count: totalUsers,
                                   icon: Icons.group_rounded,
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                                    colors: [
+                                      Color(0xFF3B82F6),
+                                      Color(0xFF1D4ED8),
+                                    ],
                                   ),
                                 ),
                                 _buildStatCard(
@@ -227,7 +249,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   count: customerCount,
                                   icon: Icons.people_outline_rounded,
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                    colors: [
+                                      Color(0xFF10B981),
+                                      Color(0xFF059669),
+                                    ],
                                   ),
                                 ),
                                 _buildStatCard(
@@ -235,7 +260,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   count: shopCount,
                                   icon: Icons.storefront_rounded,
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                                    colors: [
+                                      Color(0xFFF59E0B),
+                                      Color(0xFFD97706),
+                                    ],
                                   ),
                                 ),
                                 _buildStatCard(
@@ -243,23 +271,33 @@ class _AdminDashboardState extends State<AdminDashboard>
                                   count: serviceProviderCount,
                                   icon: Icons.business_center_rounded,
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF06B6D4), Color(0xFF0891B2)],
+                                    colors: [
+                                      Color(0xFF06B6D4),
+                                      Color(0xFF0891B2),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 30),
-                          
+
                           // Quick Actions
                           SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.5),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: _slideController,
-                              curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
-                            )),
+                            position:
+                                Tween<Offset>(
+                                  begin: const Offset(0, 0.5),
+                                  end: Offset.zero,
+                                ).animate(
+                                  CurvedAnimation(
+                                    parent: _slideController,
+                                    curve: const Interval(
+                                      0.4,
+                                      1.0,
+                                      curve: Curves.easeOutCubic,
+                                    ),
+                                  ),
+                                ),
                             child: _buildQuickActions(context),
                           ),
                         ],
@@ -304,11 +342,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 28,
-              ),
+              child: Icon(icon, color: Colors.white, size: 28),
             ),
             const Spacer(),
             Text(
@@ -341,19 +375,21 @@ class _AdminDashboardState extends State<AdminDashboard>
         'icon': Icons.manage_accounts_rounded,
         'color': const Color(0xFF6366F1),
         'onTap': () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const UserManagementScreen()),
-            ),
+          context,
+          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
+        ),
       },
       {
-        'title': 'Analytics',
-        'subtitle': 'View reports and insights',
+        'title': 'User Locations',
+        'subtitle': 'Explore where users are located',
         'icon': Icons.analytics_rounded,
         'color': const Color(0xFF3B82F6),
         'onTap': () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AnalyticsDashboard()),
-            ),
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AdminUserLocationDashboard(),
+          ),
+        ),
       },
       {
         'title': 'Bookings',
@@ -361,9 +397,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         'icon': Icons.calendar_today_rounded,
         'color': const Color(0xFF8B5CF6),
         'onTap': () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AdminBookingManagementScreen()),
-            ),
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AdminBookingManagementScreen(),
+          ),
+        ),
       },
       {
         'title': 'Orders',
@@ -371,9 +409,21 @@ class _AdminDashboardState extends State<AdminDashboard>
         'icon': Icons.shopping_cart_rounded,
         'color': const Color(0xFF06B6D4),
         'onTap': () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AdminOrderManagementScreen()),
-            ),
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AdminOrderManagementScreen(),
+          ),
+        ),
+      },
+      {
+        'title': 'Analytics',
+        'subtitle': 'View reports and insights',
+        'icon': Icons.analytics_rounded,
+        'color': const Color(0xFF3B82F6),
+        'onTap': () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AnalyticsDashboard()),
+        ),
       },
       {
         'title': 'Notifications',
@@ -381,9 +431,11 @@ class _AdminDashboardState extends State<AdminDashboard>
         'icon': Icons.notifications_active_rounded,
         'color': const Color(0xFF10B981),
         'onTap': () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AdminNotificationScreen()),
-            ),
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AdminNotificationScreen(),
+          ),
+        ),
       },
     ];
 
@@ -433,11 +485,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     color: action['color'].withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    action['icon'],
-                    color: action['color'],
-                    size: 24,
-                  ),
+                  child: Icon(action['icon'], color: action['color'], size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

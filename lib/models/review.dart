@@ -1,4 +1,4 @@
-// lib/models/review.dart - Enhanced version
+// lib/models/review.dart - Enhanced version with response support
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Review {
@@ -9,6 +9,11 @@ class Review {
   final String? comment;
   final Timestamp createdAt;
   final Timestamp? lastUpdated;
+  
+  // New fields for business response
+  final String? businessResponse;
+  final Timestamp? responseDate;
+  final String? respondedBy; // Business owner/manager name
 
   Review({
     required this.itemId,
@@ -18,6 +23,9 @@ class Review {
     this.comment,
     required this.createdAt,
     this.lastUpdated,
+    this.businessResponse,
+    this.responseDate,
+    this.respondedBy,
   });
 
   factory Review.fromMap(Map<String, dynamic> data) {
@@ -29,10 +37,12 @@ class Review {
       comment: data['comment'] as String?,
       createdAt: data['createdAt'] as Timestamp,
       lastUpdated: data['lastUpdated'] as Timestamp?,
+      businessResponse: data['businessResponse'] as String?,
+      responseDate: data['responseDate'] as Timestamp?,
+      respondedBy: data['respondedBy'] as String?,
     );
   }
 
-  // Added: toMap method for easier serialization
   Map<String, dynamic> toMap() {
     return {
       'itemId': itemId,
@@ -42,10 +52,12 @@ class Review {
       'comment': comment,
       'createdAt': createdAt,
       'lastUpdated': lastUpdated,
+      'businessResponse': businessResponse,
+      'responseDate': responseDate,
+      'respondedBy': respondedBy,
     };
   }
 
-  // Added: copyWith method for easier updates
   Review copyWith({
     String? itemId,
     String? userId,
@@ -54,6 +66,9 @@ class Review {
     String? comment,
     Timestamp? createdAt,
     Timestamp? lastUpdated,
+    String? businessResponse,
+    Timestamp? responseDate,
+    String? respondedBy,
   }) {
     return Review(
       itemId: itemId ?? this.itemId,
@@ -63,11 +78,17 @@ class Review {
       comment: comment ?? this.comment,
       createdAt: createdAt ?? this.createdAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
+      businessResponse: businessResponse ?? this.businessResponse,
+      responseDate: responseDate ?? this.responseDate,
+      respondedBy: respondedBy ?? this.respondedBy,
     );
   }
 
+  // Helper methods
+  bool get hasResponse => businessResponse != null && businessResponse!.isNotEmpty;
+
   @override
   String toString() {
-    return 'Review(itemId: $itemId, userId: $userId, userName: $userName, rating: $rating, comment: $comment)';
+    return 'Review(itemId: $itemId, userId: $userId, userName: $userName, rating: $rating, comment: $comment, hasResponse: $hasResponse)';
   }
 }

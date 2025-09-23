@@ -1,4 +1,4 @@
-// lib/widgets/admin_reviews_section.dart
+// lib/widgets/admin_reviews_section.dart - Updated with business response display
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/reviews_service.dart';
@@ -25,6 +25,7 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  String _filterType = 'all'; // 'all', 'with_responses', 'without_responses'
 
   @override
   void initState() {
@@ -87,6 +88,8 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
           const SizedBox(height: 20),
           _buildRatingSummaryCard(safeAverageRating),
           const SizedBox(height: 24),
+          _buildFilterTabs(),
+          const SizedBox(height: 16),
           _buildReviewsList(reviewsService),
         ],
       ),
@@ -268,6 +271,66 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
     );
   }
 
+  Widget _buildFilterTabs() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildFilterTab('all', 'All Reviews'),
+          ),
+          Expanded(
+            child: _buildFilterTab('with_responses', 'With Response'),
+          ),
+          Expanded(
+            child: _buildFilterTab('without_responses', 'No Response'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterTab(String filterValue, String label) {
+    final isSelected = _filterType == filterValue;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _filterType = filterValue;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? const Color(0xFF1E293B) : const Color(0xFF64748B),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildReviewsList(ReviewsService reviewsService) {
     return StreamBuilder<QuerySnapshot>(
       stream: reviewsService.getReviews(widget.itemId),
@@ -282,7 +345,25 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
           return _buildEmptyState();
         }
 
-        final reviews = snapshot.data!.docs;
+        List<QueryDocumentSnapshot> reviews = snapshot.data!.docs;
+        
+        // Filter reviews based on selected filter
+        if (_filterType == 'with_responses') {
+          reviews = reviews.where((doc) {
+            final review = Review.fromMap(doc.data() as Map<String, dynamic>);
+            return review.hasResponse;
+          }).toList();
+        } else if (_filterType == 'without_responses') {
+          reviews = reviews.where((doc) {
+            final review = Review.fromMap(doc.data() as Map<String, dynamic>);
+            return !review.hasResponse;
+          }).toList();
+        }
+
+        if (reviews.isEmpty) {
+          return _buildEmptyFilteredState();
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -346,6 +427,7 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
     final reviewData = doc.data() as Map<String, dynamic>;
     final review = Review.fromMap(reviewData);
     final safeReviewRating = _getSafeRating(review.rating);
+    final hasResponse = review.hasResponse;
 
     String? displayDate;
     Timestamp? dateToShow = review.lastUpdated ?? review.createdAt;
@@ -359,7 +441,9 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
         color: const Color(0xFFFAFBFC),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFE2E8F0),
+          color: hasResponse 
+              ? const Color(0xFF10B981).withOpacity(0.3)
+              : const Color(0xFFE2E8F0),
           width: 1,
         ),
       ),
@@ -391,14 +475,36 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      review.userName ?? 'Anonymous', // Changed from review.userId
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1E293B),
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            review.userName ?? 'Anonymous',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E293B),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (hasResponse)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Responded',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Row(
@@ -448,6 +554,8 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
               ),
             ],
           ),
+          
+          // Customer Review Content
           if (review.comment != null && review.comment!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Container(
@@ -488,6 +596,119 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Business Response Section (NEW)
+          if (hasResponse) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF10B981).withOpacity(0.03),
+                    const Color(0xFF10B981).withOpacity(0.08),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.business_rounded,
+                          color: Color(0xFF10B981),
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Response from ${review.respondedBy ?? 'Business'}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                      ),
+                      if (review.responseDate != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            DateFormat('MMM d, yyyy').format(review.responseDate!.toDate()),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF10B981).withOpacity(0.1)),
+                    ),
+                    child: Text(
+                      review.businessResponse!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF374151),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 16,
+                    color: const Color(0xFFF59E0B).withOpacity(0.8),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'No business response yet',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFFF59E0B).withOpacity(0.8),
                     ),
                   ),
                 ],
@@ -614,6 +835,63 @@ class _AdminReviewsSectionState extends State<AdminReviewsSection>
           const SizedBox(height: 8),
           Text(
             'This business hasn\'t received any reviews from customers yet.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyFilteredState() {
+    String message = '';
+    switch (_filterType) {
+      case 'with_responses':
+        message = 'No reviews with business responses found.';
+        break;
+      case 'without_responses':
+        message = 'All reviews have been responded to by the business.';
+        break;
+      default:
+        message = 'No reviews found.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.filter_list_rounded,
+              color: Color(0xFF3B82F6),
+              size: 48,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'No Matching Reviews',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[600],

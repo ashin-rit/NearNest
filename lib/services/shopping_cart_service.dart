@@ -9,6 +9,9 @@ class ShoppingCartService with ChangeNotifier {
 
   Map<String, CartItem> get items => _items;
 
+  // Get cart items as a list (needed for inventory validation)
+  List<CartItem> get itemsList => _items.values.toList();
+
   double get totalAmount {
     return _items.values.fold(0.0, (sum, item) => sum + (item.price * item.quantity));
   }

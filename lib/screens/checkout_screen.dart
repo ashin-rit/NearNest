@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:nearnest/services/shopping_cart_service.dart';
+import 'package:nearnest/services/inventory_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:nearnest/models/order_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,13 +21,17 @@ class _CheckoutScreenState extends State<CheckoutScreen>
   final Map<String, String> _selectedDeliveryOptions = {};
   final Map<String, bool> _isDeliveryAvailable = {};
   final Map<String, String> _shopNames = {};
+  final InventoryService _inventoryService = InventoryService();
   
   bool _isPlacingOrders = false;
   bool _isLoadingShopData = true;
+  bool _isValidatingStock = false;
   String? _streetAddress;
   String? _city;
   String? _state;
   String? _pincode;
+  List<String> _stockErrors = [];
+  List<String> _stockWarnings = [];
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -94,11 +99,175 @@ class _CheckoutScreenState extends State<CheckoutScreen>
     await Future.wait([
       _fetchShopsData(shopIds),
       _fetchUserAddress(),
+      _validateAllStock(),
     ]);
 
     setState(() {
       _isLoadingShopData = false;
     });
+  }
+
+  Future<void> _validateAllStock() async {
+    setState(() {
+      _isValidatingStock = true;
+      _stockErrors.clear();
+      _stockWarnings.clear();
+    });
+
+    final cart = Provider.of<ShoppingCartService>(context, listen: false);
+    final validation = await _inventoryService.validateStock(cart.itemsList);
+
+    setState(() {
+      _stockErrors = List<String>.from(validation['errors']);
+      _stockWarnings = List<String>.from(validation['warnings']);
+      _isValidatingStock = false;
+    });
+
+    if (!validation['isValid']) {
+      _showStockErrorDialog(validation);
+    } else if (_stockWarnings.isNotEmpty) {
+      _showStockWarningDialog();
+    }
+  }
+
+  void _showStockErrorDialog(Map<String, dynamic> validation) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.warning_rounded,
+                color: Colors.red,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Stock Unavailable',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Some items in your cart are no longer available:',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            ...validation['errors'].map<Widget>((error) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.error_outline, size: 16, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      error,
+                      style: const TextStyle(fontSize: 13, color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context); // Go back to cart to fix issues
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6366F1),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Update Cart'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStockWarningDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.info_outline_rounded,
+                color: Colors.orange,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Stock Notice',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Please note:',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            ..._stockWarnings.map((warning) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      warning,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _fetchShopsData(List<String> shopIds) async {
@@ -166,50 +335,89 @@ class _CheckoutScreenState extends State<CheckoutScreen>
     });
 
     try {
+      // Final stock validation before placing orders
+      final validation = await _inventoryService.validateStock(cart.itemsList);
+      
+      if (!validation['isValid']) {
+        setState(() {
+          _isPlacingOrders = false;
+        });
+        _showStockErrorDialog(validation);
+        return;
+      }
+
       final itemsByShop = cart.itemsByShop;
-      final List<Future<void>> orderFutures = [];
+      final List<String> successfulOrders = [];
+      final List<String> failedOrders = [];
 
       // Create separate orders for each shop
       for (String shopId in itemsByShop.keys) {
         final shopItems = itemsByShop[shopId] ?? [];
         if (shopItems.isEmpty) continue;
 
-        final shopTotal = cart.getTotalForShop(shopId);
-        final isDelivery = _selectedDeliveryOptions[shopId] == 'delivery';
-        final remarks = _remarksControllers[shopId]?.text ?? '';
+        try {
+          final shopTotal = cart.getTotalForShop(shopId);
+          final isDelivery = _selectedDeliveryOptions[shopId] == 'delivery';
+          final remarks = _remarksControllers[shopId]?.text ?? '';
+          final shopName = _shopNames[shopId] ?? 'Unknown Shop';
 
-        final orderData = Order(
-          id: '',
-          userId: user.uid,
-          items: shopItems,
-          total: shopTotal,
-          isDelivery: isDelivery,
-          shopId: shopId,
-          remarks: remarks,
-          orderDate: Timestamp.now(),
-          status: 'Pending',
-        );
+          // Create the order
+          final orderData = Order(
+            id: '',
+            userId: user.uid,
+            items: shopItems,
+            total: shopTotal,
+            isDelivery: isDelivery,
+            shopId: shopId,
+            remarks: remarks,
+            orderDate: Timestamp.now(),
+            status: 'Pending',
+          );
 
-        // Add order creation to futures list
-        orderFutures.add(
-          FirebaseFirestore.instance.collection('orders').add(orderData.toMap())
-        );
+          // Add order to Firestore
+          final orderRef = await FirebaseFirestore.instance
+              .collection('orders')
+              .add(orderData.toMap());
+
+          // Reduce stock quantities
+          final stockReduced = await _inventoryService.reduceStock(
+            shopItems, 
+            orderRef.id
+          );
+
+          if (stockReduced) {
+            successfulOrders.add(shopName);
+          } else {
+            failedOrders.add(shopName);
+            // If stock reduction fails, we should ideally remove the order
+            // but for simplicity, we'll let the shop owner handle it manually
+          }
+
+        } catch (e) {
+          print('Error placing order for shop $shopId: $e');
+          failedOrders.add(_shopNames[shopId] ?? 'Unknown Shop');
+        }
       }
 
-      // Execute all order creations
-      await Future.wait(orderFutures);
+      if (successfulOrders.isNotEmpty) {
+        // Clear cart after successful orders
+        await cart.clearCart();
+        
+        String message;
+        if (failedOrders.isEmpty) {
+          message = successfulOrders.length == 1 
+            ? 'Order placed successfully!'
+            : '${successfulOrders.length} orders placed successfully!';
+        } else {
+          message = 'Some orders placed successfully. Please check your order history.';
+        }
+        
+        _showSuccessSnackBar(message);
+        Navigator.pop(context, true);
+      } else {
+        _showErrorSnackBar('Failed to place orders. Please try again.');
+      }
 
-      // Clear cart after all orders are placed
-      await cart.clearCart();
-
-      final orderCount = itemsByShop.length;
-      _showSuccessSnackBar(
-        orderCount == 1 
-          ? 'Order placed successfully!'
-          : '$orderCount orders placed successfully!'
-      );
-      
-      Navigator.pop(context, true);
     } catch (e) {
       print('Error placing orders: $e');
       _showErrorSnackBar('Failed to place orders. Please try again.');
@@ -291,7 +499,7 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'Loading checkout details...',
+                  'Validating stock and loading checkout...',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
@@ -388,9 +596,15 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Stock validation status
+                    if (_isValidatingStock) _buildValidatingStockBanner(),
+                    if (_stockErrors.isNotEmpty) _buildStockErrorBanner(),
+                    if (_stockWarnings.isNotEmpty && _stockErrors.isEmpty) _buildStockWarningBanner(),
+                    
                     if (itemsByShop.length > 1)
                       _buildMultiShopNotice(itemsByShop.length),
                     const SizedBox(height: 20),
+                    
                     // Build checkout sections for each shop
                     ...itemsByShop.entries.map((entry) {
                       final shopId = entry.key;
@@ -424,6 +638,121 @@ class _CheckoutScreenState extends State<CheckoutScreen>
     );
   }
 
+  Widget _buildValidatingStockBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B82F6).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.2)),
+      ),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF3B82F6),
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Validating product availability...',
+              style: TextStyle(
+                color: Color(0xFF3B82F6),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStockErrorBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Stock Issues Found',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ..._stockErrors.take(3).map((error) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '• $error',
+              style: const TextStyle(color: Colors.red, fontSize: 13),
+            ),
+          )).toList(),
+          if (_stockErrors.length > 3)
+            Text(
+              'and ${_stockErrors.length - 3} more issues...',
+              style: TextStyle(color: Colors.red.shade600, fontSize: 12),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStockWarningBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.warning_outlined, color: Colors.orange, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Stock Notices',
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ..._stockWarnings.map((warning) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              '• $warning',
+              style: const TextStyle(color: Colors.orange, fontSize: 13),
+            ),
+          )).toList(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       expandedHeight: 120,
@@ -442,6 +771,20 @@ class _CheckoutScreenState extends State<CheckoutScreen>
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
+      actions: [
+        Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            onPressed: _validateAllStock,
+            tooltip: 'Refresh Stock Status',
+          ),
+        ),
+      ],
       flexibleSpace: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -1046,12 +1389,13 @@ class _CheckoutScreenState extends State<CheckoutScreen>
 
   Widget _buildConfirmAllOrdersButton(ShoppingCartService cart) {
     final orderCount = cart.shopIds.length;
+    final hasStockErrors = _stockErrors.isNotEmpty;
     
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        boxShadow: hasStockErrors ? [] : [
           BoxShadow(
             color: const Color(0xFF10B981).withOpacity(0.4),
             blurRadius: 16,
@@ -1060,9 +1404,9 @@ class _CheckoutScreenState extends State<CheckoutScreen>
         ],
       ),
       child: ElevatedButton(
-        onPressed: _isPlacingOrders ? null : () => _placeAllOrders(context),
+        onPressed: (_isPlacingOrders || hasStockErrors) ? null : () => _placeAllOrders(context),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF10B981),
+          backgroundColor: hasStockErrors ? Colors.grey.shade400 : const Color(0xFF10B981),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 18),
           shape: RoundedRectangleBorder(
@@ -1092,22 +1436,37 @@ class _CheckoutScreenState extends State<CheckoutScreen>
                   ),
                 ],
               )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.shopping_cart_checkout_rounded, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    orderCount == 1 
-                      ? 'Confirm Order • ₹${cart.totalAmount.toStringAsFixed(2)}'
-                      : 'Place $orderCount Orders • ₹${cart.totalAmount.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+            : hasStockErrors
+                ? const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline_rounded, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Fix Stock Issues First',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.shopping_cart_checkout_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        orderCount == 1 
+                          ? 'Confirm Order • ₹${cart.totalAmount.toStringAsFixed(2)}'
+                          : 'Place $orderCount Orders • ₹${cart.totalAmount.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
       ),
     );
   }

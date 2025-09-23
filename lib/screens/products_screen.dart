@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:nearnest/models/product_model.dart';
 import 'package:nearnest/services/shopping_cart_service.dart';
+import 'package:nearnest/services/inventory_service.dart';
 import 'package:nearnest/screens/product_detail_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -20,8 +21,10 @@ class _ProductsScreenState extends State<ProductsScreen>
   final _searchController = TextEditingController();
   String _searchQuery = '';
   String? _selectedCategory;
+
   List<String> _categories = ['All'];
   bool _isGridView = true;
+  final InventoryService _inventoryService = InventoryService();
   
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -64,6 +67,7 @@ class _ProductsScreenState extends State<ProductsScreen>
     final productsSnapshot = await FirebaseFirestore.instance
         .collection('products')
         .where('shopId', isEqualTo: widget.shopId)
+        .where('isActive', isEqualTo: true) // Only show active products
         .get();
 
     final Set<String> uniqueCategories = {};
@@ -77,6 +81,66 @@ class _ProductsScreenState extends State<ProductsScreen>
     setState(() {
       _categories = ['All', ...uniqueCategories.toList()..sort()];
     });
+  }
+
+  Widget _buildStockBadge(Product product) {
+    Color badgeColor;
+    String badgeText;
+    IconData badgeIcon;
+    
+    if (!product.isActive) {
+      return const SizedBox.shrink(); // Don't show inactive products
+    } else if (product.stockQuantity <= 0) {
+      badgeColor = Colors.red.shade600;
+      badgeText = 'Out of Stock';
+      badgeIcon = Icons.remove_circle_outline_rounded;
+    } else if (product.isLowStock) {
+      badgeColor = Colors.orange.shade700;
+      badgeText = 'Only ${product.stockQuantity} left!';
+      badgeIcon = Icons.warning_rounded;
+    } else if (product.stockQuantity <= 10) {
+      badgeColor = const Color(0xFF10B981);
+      badgeText = '${product.stockQuantity} in stock';
+      badgeIcon = Icons.check_circle_rounded;
+    } else {
+      badgeColor = const Color(0xFF10B981);
+      badgeText = 'In Stock';
+      badgeIcon = Icons.check_circle_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: badgeColor,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            badgeIcon,
+            size: 10,
+            color: Colors.white,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            badgeText,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -103,13 +167,13 @@ class _ProductsScreenState extends State<ProductsScreen>
                 ),
               ),
               background: Container(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      const Color(0xFF6366F1),
-                      const Color(0xFF8B5CF6),
+                      Color(0xFF6366F1),
+                      Color(0xFF8B5CF6),
                     ],
                   ),
                 ),
@@ -207,6 +271,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                         ),
                       ),
                       const SizedBox(height: 16),
+                      
                       // Category Filter Chips
                       if (_categories.length > 1)
                         SingleChildScrollView(
@@ -251,6 +316,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                             }).toList(),
                           ),
                         ),
+                      
                     ],
                   ),
                 ),
@@ -263,6 +329,7 @@ class _ProductsScreenState extends State<ProductsScreen>
               stream: FirebaseFirestore.instance
                   .collection('products')
                   .where('shopId', isEqualTo: widget.shopId)
+                  .where('isActive', isEqualTo: true) // Only show active products
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -358,7 +425,9 @@ class _ProductsScreenState extends State<ProductsScreen>
                         name: data['name'] ?? 'No Name',
                         description: data['description'] ?? 'No description.',
                         price: (data['price'] ?? 0.0).toDouble(),
-                        isAvailable: data['isAvailable'] ?? true,
+                        stockQuantity: data['stockQuantity'] ?? 0,
+                        minStockLevel: data['minStockLevel'] ?? 5,
+                        isActive: data['isActive'] ?? data['isAvailable'] ?? true,
                         imageUrl: data['imageUrl'] ?? '',
                         category: data['category'] ?? 'Uncategorized',
                       );
@@ -368,7 +437,10 @@ class _ProductsScreenState extends State<ProductsScreen>
                           product.name.toLowerCase().contains(_searchQuery);
                       final matchesCategory = _selectedCategory == null ||
                           product.category == _selectedCategory;
-                      return matchesSearch && matchesCategory && product.isAvailable;
+                      // Only show active products with stock available for customers
+                      final isAvailableToCustomers = product.isActive && product.stockQuantity > 0;
+                      
+                      return matchesSearch && matchesCategory && isAvailableToCustomers;
                     })
                     .toList();
 
@@ -413,7 +485,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                     ? SliverGrid(
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          childAspectRatio: 0.75,
+                          childAspectRatio: 0.72,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
                         ),
@@ -437,6 +509,8 @@ class _ProductsScreenState extends State<ProductsScreen>
   }
 
   Widget _buildProductGridCard(Product product, ShoppingCartService cart) {
+    final isOutOfStock = product.stockQuantity <= 0;
+    
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -461,39 +535,69 @@ class _ProductsScreenState extends State<ProductsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image
+            // Product Image with Stock Badge
             Expanded(
               flex: 3,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Container(
-                  width: double.infinity,
-                  child: product.imageUrl.isNotEmpty
-                      ? Image.network(
-                          product.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.grey.shade100,
-                            child: Center(
-                              child: Icon(
-                                Icons.image_not_supported_rounded,
-                                size: 40,
-                                color: Colors.grey[400],
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: Container(
+                      width: double.infinity,
+                      child: product.imageUrl.isNotEmpty
+                          ? Image.network(
+                              product.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: Colors.grey.shade100,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.image_not_supported_rounded,
+                                    size: 40,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: Colors.grey.shade100,
+                              child: Center(
+                                child: Icon(
+                                  Icons.shopping_bag_rounded,
+                                  size: 40,
+                                  color: Colors.grey[400],
+                                ),
                               ),
                             ),
-                          ),
-                        )
-                      : Container(
-                          color: Colors.grey.shade100,
-                          child: Center(
-                            child: Icon(
-                              Icons.shopping_bag_rounded,
-                              size: 40,
-                              color: Colors.grey[400],
+                    ),
+                  ),
+                  // Stock Badge
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _buildStockBadge(product),
+                  ),
+                  // Out of stock overlay
+                  if (isOutOfStock)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'OUT OF STOCK',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
                             ),
                           ),
                         ),
-                ),
+                      ),
+                    ),
+                ],
               ),
             ),
             // Product Details
@@ -506,10 +610,10 @@ class _ProductsScreenState extends State<ProductsScreen>
                   children: [
                     Text(
                       product.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: Color(0xFF1F2937),
+                        color: isOutOfStock ? Colors.grey : const Color(0xFF1F2937),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -517,8 +621,8 @@ class _ProductsScreenState extends State<ProductsScreen>
                     const SizedBox(height: 4),
                     Text(
                       '₹${product.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Color(0xFF10B981),
+                      style: TextStyle(
+                        color: isOutOfStock ? Colors.grey : const Color(0xFF10B981),
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -530,7 +634,24 @@ class _ProductsScreenState extends State<ProductsScreen>
                           child: Container(
                             height: 32,
                             child: ElevatedButton(
-                              onPressed: () {
+                              onPressed: isOutOfStock ? null : () async {
+                                // Check stock before adding
+                                final stockInfo = await _inventoryService.checkProductStock(product.id, 1);
+                                
+                                if (!stockInfo['available']) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(stockInfo['reason']),
+                                      backgroundColor: Colors.orange.shade600,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                
                                 cart.addItem(product);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -544,14 +665,21 @@ class _ProductsScreenState extends State<ProductsScreen>
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF6366F1),
+                                backgroundColor: isOutOfStock 
+                                    ? Colors.grey.shade300 
+                                    : const Color(0xFF6366F1),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+                              child: Icon(
+                                isOutOfStock 
+                                    ? Icons.block_rounded 
+                                    : Icons.add_shopping_cart_rounded, 
+                                size: 16
+                              ),
                             ),
                           ),
                         ),
@@ -568,6 +696,8 @@ class _ProductsScreenState extends State<ProductsScreen>
   }
 
   Widget _buildProductListCard(Product product, ShoppingCartService cart) {
+    final isOutOfStock = product.stockQuantity <= 0;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -595,38 +725,63 @@ class _ProductsScreenState extends State<ProductsScreen>
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Product Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  child: product.imageUrl.isNotEmpty
-                      ? Image.network(
-                          product.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.grey.shade100,
-                            child: Center(
-                              child: Icon(
-                                Icons.image_not_supported_rounded,
-                                size: 32,
-                                color: Colors.grey[400],
+              // Product Image with Stock Badge
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      child: product.imageUrl.isNotEmpty
+                          ? Image.network(
+                              product.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: Colors.grey.shade100,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.image_not_supported_rounded,
+                                    size: 32,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: Colors.grey.shade100,
+                              child: Center(
+                                child: Icon(
+                                  Icons.shopping_bag_rounded,
+                                  size: 32,
+                                  color: Colors.grey[400],
+                                ),
                               ),
                             ),
-                          ),
-                        )
-                      : Container(
-                          color: Colors.grey.shade100,
-                          child: Center(
-                            child: Icon(
-                              Icons.shopping_bag_rounded,
-                              size: 32,
-                              color: Colors.grey[400],
+                    ),
+                  ),
+                  // Out of stock overlay
+                  if (isOutOfStock)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'OUT OF\nSTOCK',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 16),
               // Product Details
@@ -634,15 +789,22 @@ class _ProductsScreenState extends State<ProductsScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF1F2937),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            product.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isOutOfStock ? Colors.grey : const Color(0xFF1F2937),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        _buildStockBadge(product),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     if (product.description.isNotEmpty)
@@ -660,8 +822,8 @@ class _ProductsScreenState extends State<ProductsScreen>
                       children: [
                         Text(
                           '₹${product.price.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: Color(0xFF10B981),
+                          style: TextStyle(
+                            color: isOutOfStock ? Colors.grey : const Color(0xFF10B981),
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                           ),
@@ -669,11 +831,30 @@ class _ProductsScreenState extends State<ProductsScreen>
                         const Spacer(),
                         Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF6366F1),
+                            color: isOutOfStock 
+                                ? Colors.grey.shade300 
+                                : const Color(0xFF6366F1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: IconButton(
-                            onPressed: () {
+                            onPressed: isOutOfStock ? null : () async {
+                              // Check stock before adding
+                              final stockInfo = await _inventoryService.checkProductStock(product.id, 1);
+                              
+                              if (!stockInfo['available']) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(stockInfo['reason']),
+                                    backgroundColor: Colors.orange.shade600,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              
                               cart.addItem(product);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
@@ -686,8 +867,10 @@ class _ProductsScreenState extends State<ProductsScreen>
                                 ),
                               );
                             },
-                            icon: const Icon(
-                              Icons.add_shopping_cart_rounded,
+                            icon: Icon(
+                              isOutOfStock 
+                                  ? Icons.block_rounded 
+                                  : Icons.add_shopping_cart_rounded,
                               color: Colors.white,
                               size: 20,
                             ),

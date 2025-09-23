@@ -1,4 +1,4 @@
-// lib/screens/dashboards/shop_dashboard.dart
+// lib/screens/dashboards/shop_dashboard.dart - Updated with Review Management
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,6 +7,7 @@ import 'package:nearnest/screens/dashboards/shop_profile_edit_screen.dart';
 import 'package:nearnest/screens/product_management_screen.dart';
 import 'package:nearnest/screens/login_page.dart';
 import 'package:nearnest/screens/dashboards/shop_order_management_screen.dart';
+import 'package:nearnest/screens/review_management_screen.dart';
 
 class ShopDashboard extends StatefulWidget {
   const ShopDashboard({super.key});
@@ -377,20 +378,50 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
           ],
         ),
         const SizedBox(height: 12),
-        _buildActionCard(
-          'Manage Orders',
-          Icons.shopping_bag_rounded,
-          const Color(0xFFF59E0B),
-          () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => ShopOrderManagementScreen(
-                  shopId: _auth.currentUser!.uid,
-                ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'Manage Orders',
+                Icons.shopping_bag_rounded,
+                const Color(0xFFF59E0B),
+                () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ShopOrderManagementScreen(
+                        shopId: _auth.currentUser!.uid,
+                      ),
+                    ),
+                  );
+                },
+                isWide: true,
               ),
-            );
-          },
-          isWide: true,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'Manage Reviews',
+                Icons.reviews_rounded,
+                const Color(0xFF8B5CF6),
+                () {
+                  final data = _shopData!.data() as Map<String, dynamic>;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ReviewManagementScreen(
+                        businessId: _auth.currentUser!.uid,
+                        businessName: data['name'] ?? 'Your Business',
+                      ),
+                    ),
+                  );
+                },
+                isWide: true,
+              ),
+            ),
+          ],
         ),
       ],
     );

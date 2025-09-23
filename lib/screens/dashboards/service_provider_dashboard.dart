@@ -1,4 +1,4 @@
-// lib/screens/dashboards/service_provider_dashboard.dart
+// lib/screens/dashboards/service_provider_dashboard.dart - Complete Updated Version
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,6 +6,7 @@ import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/screens/dashboards/service_provider_profile_edit_screen.dart';
 import 'package:nearnest/screens/dashboards/service_package_management_screen.dart';
 import 'package:nearnest/screens/dashboards/service_provider_bookings_screen.dart';
+import 'package:nearnest/screens/review_management_screen.dart';
 import 'package:nearnest/screens/login_page.dart';
 
 class ServiceProviderDashboard extends StatefulWidget {
@@ -697,6 +698,26 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard>
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const ServicePackageManagementScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildActionTile(
+              context,
+              'Manage Reviews',
+              'Respond to customer reviews and feedback',
+              Icons.reviews_rounded,
+              const Color(0xFF8B5CF6),
+              () {
+                final data = _providerData!.data() as Map<String, dynamic>;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReviewManagementScreen(
+                      businessId: _auth.currentUser!.uid,
+                      businessName: data['name'] ?? 'Your Service',
+                    ),
+                  ),
                 );
               },
             ),
