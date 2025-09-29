@@ -10,17 +10,39 @@ class AdminBookingManagementScreen extends StatefulWidget {
       _AdminBookingManagementScreenState();
 }
 
-class _AdminBookingManagementScreenState extends State<AdminBookingManagementScreen>
+class _AdminBookingManagementScreenState
+    extends State<AdminBookingManagementScreen>
     with TickerProviderStateMixin {
   String _selectedStatus = 'All';
   bool _sortAscending = false;
   late AnimationController _fadeController;
 
   final List<Map<String, dynamic>> _statusOptions = [
-    {'value': 'All', 'color': Color(0xFF6B7280), 'icon': Icons.all_inclusive_rounded},
-    {'value': 'Pending', 'color': Color(0xFFF59E0B), 'icon': Icons.schedule_rounded},
-    {'value': 'Confirmed', 'color': Color(0xFF10B981), 'icon': Icons.check_circle_rounded},
-    {'value': 'Canceled', 'color': Color(0xFFEF4444), 'icon': Icons.cancel_rounded},
+    {
+      'value': 'All',
+      'color': Color(0xFF6B7280),
+      'icon': Icons.all_inclusive_rounded,
+    },
+    {
+      'value': 'Pending',
+      'color': Color(0xFFF59E0B),
+      'icon': Icons.schedule_rounded,
+    },
+    {
+      'value': 'Confirmed',
+      'color': Color(0xFF10B981),
+      'icon': Icons.check_circle_rounded,
+    },
+    {
+      'value': 'Completed',
+      'color': Color(0xFF8B5CF6),
+      'icon': Icons.task_alt_rounded,
+    },
+    {
+      'value': 'Canceled',
+      'color': Color(0xFFEF4444),
+      'icon': Icons.cancel_rounded,
+    },
   ];
 
   @override
@@ -40,8 +62,9 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
   }
 
   Stream<List<Map<String, dynamic>>> _fetchBookingsWithDetails() {
-    Query<Map<String, dynamic>> query =
-        FirebaseFirestore.instance.collection('bookings');
+    Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection(
+      'bookings',
+    );
 
     if (_selectedStatus != 'All') {
       query = query.where('status', isEqualTo: _selectedStatus);
@@ -57,14 +80,16 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
         String customerName = 'Unknown Customer';
         String serviceProviderName = 'Unknown Provider';
         String serviceProviderCategory = 'N/A';
-        
+
         if (customerId.isNotEmpty) {
           final customerDoc = await FirebaseFirestore.instance
               .collection('users')
               .doc(customerId)
               .get();
           if (customerDoc.exists) {
-            final customerData = Map<String, dynamic>.from(customerDoc.data() as Map);
+            final customerData = Map<String, dynamic>.from(
+              customerDoc.data() as Map,
+            );
             customerName = customerData['name'] ?? 'N/A';
           }
         }
@@ -75,12 +100,14 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
               .doc(serviceProviderId)
               .get();
           if (providerDoc.exists) {
-            final providerData = Map<String, dynamic>.from(providerDoc.data() as Map);
+            final providerData = Map<String, dynamic>.from(
+              providerDoc.data() as Map,
+            );
             serviceProviderName = providerData['name'] ?? 'N/A';
             serviceProviderCategory = providerData['category'] ?? 'N/A';
           }
         }
-        
+
         detailedBookings.add({
           'id': bookingDoc.id,
           ...bookingData,
@@ -94,14 +121,12 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
       detailedBookings.sort((a, b) {
         final aTime = a['bookingTime'] as Timestamp?;
         final bTime = b['bookingTime'] as Timestamp?;
-        
+
         if (aTime == null && bTime == null) return 0;
         if (aTime == null) return 1;
         if (bTime == null) return -1;
-        
-        return _sortAscending 
-            ? aTime.compareTo(bTime) 
-            : bTime.compareTo(aTime);
+
+        return _sortAscending ? aTime.compareTo(bTime) : bTime.compareTo(aTime);
       });
 
       return detailedBookings;
@@ -112,6 +137,8 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
     switch (status) {
       case 'Confirmed':
         return const Color(0xFF10B981);
+      case 'Completed':
+        return const Color(0xFF8B5CF6);
       case 'Canceled':
         return const Color(0xFFEF4444);
       case 'Pending':
@@ -128,10 +155,7 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
       appBar: AppBar(
         title: const Text(
           'Booking Management',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: const Color(0xFF6366F1),
         elevation: 0,
@@ -148,7 +172,9 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
             ),
             child: IconButton(
               icon: Icon(
-                _sortAscending ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                _sortAscending
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_upward_rounded,
                 color: Colors.white,
               ),
               onPressed: () {
@@ -318,13 +344,10 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
           ),
           const SizedBox(height: 8),
           Text(
-            _selectedStatus == 'All' 
+            _selectedStatus == 'All'
                 ? 'No bookings available at the moment'
                 : 'No $_selectedStatus bookings found',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF9CA3AF),
-            ),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
           ),
         ],
       ),
@@ -360,10 +383,7 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
           const SizedBox(height: 8),
           Text(
             error,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF9CA3AF),
-            ),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -415,7 +435,9 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(status ?? '').withOpacity(0.1),
+                            color: _getStatusColor(
+                              status ?? '',
+                            ).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -444,7 +466,9 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _getStatusColor(status ?? '').withOpacity(0.1),
+                                  color: _getStatusColor(
+                                    status ?? '',
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -471,7 +495,7 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Service Info
                     _buildInfoRow(
                       icon: Icons.business_center_rounded,
@@ -479,7 +503,7 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
                       value: '$serviceProviderCategory - $serviceName',
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Customer Info
                     _buildInfoRow(
                       icon: Icons.person_rounded,
@@ -487,7 +511,7 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
                       value: customerName,
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Provider Info
                     _buildInfoRow(
                       icon: Icons.support_agent_rounded,
@@ -495,19 +519,22 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
                       value: serviceProviderName,
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Time Info
                     _buildInfoRow(
                       icon: Icons.access_time_rounded,
                       label: 'Time',
                       value: bookingTime != null
-                          ? DateFormat('MMM dd, yyyy • hh:mm a')
-                              .format(bookingTime.toDate())
+                          ? DateFormat(
+                              'MMM dd, yyyy • hh:mm a',
+                            ).format(bookingTime.toDate())
                           : 'N/A',
                     ),
-                    
+
                     // Additional Info
-                    if (status == 'Confirmed' && remarks != null && remarks.isNotEmpty) ...[
+                    if (status == 'Confirmed' &&
+                        remarks != null &&
+                        remarks.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Container(
                         width: double.infinity,
@@ -539,8 +566,10 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
                         ),
                       ),
                     ],
-                    
-                    if (status == 'Canceled' && cancelReason != null && cancelReason.isNotEmpty) ...[
+
+                    if (status == 'Canceled' &&
+                        cancelReason != null &&
+                        cancelReason.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Container(
                         width: double.infinity,
@@ -571,6 +600,42 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
                           ],
                         ),
                       ),
+
+                      if (status == 'Completed') ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8B5CF6).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.check_circle_outline_rounded,
+                                size: 16,
+                                color: Color(0xFF8B5CF6),
+                              ),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text(
+                                  'This service has been completed successfully',
+                                  style: TextStyle(
+                                    color: Color(0xFF7C3AED),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -589,11 +654,7 @@ class _AdminBookingManagementScreenState extends State<AdminBookingManagementScr
   }) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: const Color(0xFF6B7280),
-        ),
+        Icon(icon, size: 16, color: const Color(0xFF6B7280)),
         const SizedBox(width: 8),
         Text(
           '$label:',

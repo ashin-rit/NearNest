@@ -58,20 +58,44 @@ class _ShopServiceDetailScreenState extends State<ShopServiceDetailScreen> with 
     super.dispose();
   }
 
-  Future<void> _openMap(double latitude, double longitude, String name) async {
-    final url = 'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+Future<void> _openMap(double latitude, double longitude, String customerName) async {
+  if (latitude == 0.0 || longitude == 0.0) {
+    _showSnackBar('Customer location not available', Colors.orange);
+    return;
+  }
+  
+  // Try Google Maps URL scheme first (better for mobile)
+  final googleMapsUrl = Uri.parse('geo:$latitude,$longitude?q=$latitude,$longitude');
+  
+  // Fallback to web URL
+  final webUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
+  
+  try {
+    if (await canLaunchUrl(googleMapsUrl)) {
+      await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+    } else if (await canLaunchUrl(webUrl)) {
+      await launchUrl(webUrl, mode: LaunchMode.externalApplication);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Could not open map application'),
-          backgroundColor: Colors.red[600],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+      _showSnackBar('Could not open map application', Colors.red);
     }
+  } catch (e) {
+    _showSnackBar('Error opening maps: $e', Colors.red);
+  }
+}
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   Future<void> _showBookingDialog(ServicePackage package) async {

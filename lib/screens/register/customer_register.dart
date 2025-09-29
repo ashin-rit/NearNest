@@ -9,16 +9,16 @@ class CustomerRegisterPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final Map<String, dynamic> userConfig = {
       'role': 'Customer',
-      'color': const Color(0xFF065F46),
+      'color': const Color(0xFF06D6A0), // Updated to match login page
       'gradient': const [
-        Color(0xFF34D399),
-        Color(0xFF10B981),
-        Color(0xFF059669),
-        Color(0xFF047857),
-      ],
-      'icon': Icons.people,
+        Color(0xFF06D6A0),
+        Color(0xFF118AB2), 
+        Color(0xFF073B4C),
+        Color(0xFF0F3460),
+      ], // Updated to match login page gradient
+      'icon': Icons.people_alt_rounded, // Modern rounded icon
       'title': 'Customer Registration',
-      'subtitle': 'Join our community today'
+      'subtitle': 'Join our community and discover amazing services'
     };
 
     return RegistrationPage(userConfig: userConfig);

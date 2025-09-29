@@ -9,16 +9,16 @@ class ShopsRegisterPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final Map<String, dynamic> userConfig = {
       'role': 'Shop',
-      'color': const Color(0xFF854D0E),
+      'color': const Color(0xFF92400E), // Updated to match login page
       'gradient': const [
-        Color(0xFFFACC15),
-        Color(0xFFEAB308),
-        Color(0xFFCA8A04),
-        Color(0xFFB45309),
-      ],
-      'icon': Icons.store,
+        Color(0xFF92400E), // Amber-brown
+        Color(0xFFB45309), // Orange-brown  
+        Color(0xFFD97706), // Amber-orange
+        Color(0xFFF59E0B), // Amber
+      ], // Updated to match login page gradient
+      'icon': Icons.storefront_rounded, // Modern rounded icon
       'title': 'Shop Registration',
-      'subtitle': 'Register your shop to reach new customers'
+      'subtitle': 'Register your shop and reach new customers online'
     };
 
     return RegistrationPage(userConfig: userConfig);

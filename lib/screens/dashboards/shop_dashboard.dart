@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/screens/dashboards/shop_profile_edit_screen.dart';
 import 'package:nearnest/screens/product_management_screen.dart';
-import 'package:nearnest/screens/login_page.dart';
+import 'package:nearnest/screens/login/shop_login_page.dart';
 import 'package:nearnest/screens/dashboards/shop_order_management_screen.dart';
 import 'package:nearnest/screens/review_management_screen.dart';
 
@@ -73,7 +73,7 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
   Future<void> _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const LoginPage()),
+      MaterialPageRoute(builder: (context) => const ShopLoginPage()),
     );
   }
 

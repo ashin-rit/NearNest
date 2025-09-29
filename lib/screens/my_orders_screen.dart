@@ -25,15 +25,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-    
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+
     _fadeController.forward();
   }
 
@@ -66,105 +62,245 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
   }
 
   bool _canDeleteOrder(String status) {
-    return status.toLowerCase() == 'pending';
+    final statusLower = status.toLowerCase();
+    // Can only delete pending orders
+    return statusLower == 'pending';
+  }
+
+  bool _canCancelOrder(String status) {
+    final statusLower = status.toLowerCase();
+    // Can cancel pending or confirmed orders
+    return statusLower == 'pending' || statusLower == 'confirmed';
   }
 
   /// Shows confirmation dialog for order deletion
-  Future<void> _showDeleteOrderDialog(String orderId, String shopName) async {
+  /// Shows confirmation dialog for order cancellation
+  Future<void> _showCancelOrderDialog(
+    String orderId,
+    String shopName,
+    String status,
+  ) async {
+    final bool isConfirmed = status.toLowerCase() == 'confirmed';
+
     return showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
+        return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
                 ),
-                child: const Icon(
-                  Icons.delete_forever_rounded,
-                  color: Color(0xFFEF4444),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Cancel Order',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E293B),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: isConfirmed
+                          ? Colors.orange.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Icon(
+                      isConfirmed
+                          ? Icons.warning_amber_rounded
+                          : Icons.cancel_rounded,
+                      color: isConfirmed ? Colors.orange : Colors.red,
+                      size: 30,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isConfirmed ? 'Cancel Confirmed Order?' : 'Cancel Order',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2D3748),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Warning message for confirmed orders
+                  if (isConfirmed) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.orange.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: Colors.orange[700],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Please Note',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange[700],
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildWarningPoint(
+                            '$shopName has confirmed this order',
+                          ),
+                          const SizedBox(height: 8),
+                          _buildWarningPoint(
+                            'They may have already started preparing your items',
+                          ),
+                          const SizedBox(height: 8),
+                          _buildWarningPoint(
+                            'Late cancellations can impact the shop',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ] else ...[
+                    Text(
+                      'Are you sure you want to cancel this order from $shopName?',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 30),
+                  ],
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          child: const Text(
+                            'Keep Order',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF718096),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            await _cancelOrder(orderId);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isConfirmed
+                                ? Colors.orange
+                                : Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: const Text(
+                            'Confirm Cancellation',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-          content: Text(
-            'Are you sure you want to cancel this order from $shopName? This action cannot be undone.',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-              height: 1.4,
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Keep Order',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _deleteOrder(orderId);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Cancel Order',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
         );
       },
     );
   }
 
-  /// Deletes an order from Firestore
-  Future<void> _deleteOrder(String orderId) async {
+  // Helper widget for warning points
+  Widget _buildWarningPoint(String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '• ',
+          style: TextStyle(
+            color: Colors.orange[700],
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.orange[800],
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Cancels an order by updating its status to 'Canceled'
+  Future<void> _cancelOrder(String orderId) async {
     try {
       await FirebaseFirestore.instance
           .collection('orders')
           .doc(orderId)
-          .delete();
-      
+          .update({
+            'status': 'Canceled',
+            'cancellationReason': 'Cancelled by user',
+            'cancelledAt': FieldValue.serverTimestamp(),
+          });
+
       _showSuccessSnackBar('Order cancelled successfully!');
     } catch (e) {
-      print('Error deleting order: $e');
+      print('Error cancelling order: $e');
       _showErrorSnackBar('Failed to cancel order. Please try again.');
     }
   }
@@ -183,7 +319,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
           ),
           backgroundColor: const Color(0xFF10B981),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -204,7 +342,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
           ),
           backgroundColor: const Color(0xFFEF4444),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -319,10 +459,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF06B6D4),
-              Color(0xFF3B82F6),
-            ],
+            colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
           ),
         ),
         child: FlexibleSpaceBar(
@@ -340,10 +477,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF06B6D4),
-                  Color(0xFF3B82F6),
-                ],
+                colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
               ),
             ),
             child: const Center(
@@ -404,10 +538,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
               const SizedBox(height: 8),
               Text(
                 'You need to log in to view your orders',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -499,10 +630,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
           const SizedBox(height: 8),
           Text(
             error,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -574,7 +702,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
             child: const Text(
               'Start Shopping',
               style: TextStyle(fontWeight: FontWeight.w600),
-              
             ),
           ),
         ],
@@ -609,7 +736,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     final statusStyle = _getStatusStyle(status);
 
     final canEdit = _canEditOrder(status);
-    final canDelete = _canDeleteOrder(status);
+    final canCancel = _canCancelOrder(
+      status,
+    ); // Use canCancel instead of canDelete
 
     return Container(
       decoration: BoxDecoration(
@@ -637,14 +766,28 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildOrderHeader(shopId, orderTimestamp, statusStyle, status, isDelivery),
+                _buildOrderHeader(
+                  shopId,
+                  orderTimestamp,
+                  statusStyle,
+                  status,
+                  isDelivery,
+                ),
                 if (items.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _buildOrderItems(items),
+                  _buildOrderStatusAndRemarks(order, statusStyle, status),
                 ],
-                if (canEdit || canDelete) ...[
+                if (canEdit || canCancel) ...[
                   const SizedBox(height: 20),
-                  _buildOrderActions(orderId, shopId, status, canEdit, canDelete, order),
+                  _buildOrderActions(
+                    orderId,
+                    shopId,
+                    status,
+                    canEdit,
+                    false,
+                    order,
+                  ), // Pass canCancel through status check in the method
                 ],
               ],
             ),
@@ -654,16 +797,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     );
   }
 
-  Widget _buildOrderActions(String orderId, String shopId, String status, bool canEdit, bool canDelete, Map<String, dynamic> orderData) {
+  Widget _buildOrderActions(
+    String orderId,
+    String shopId,
+    String status,
+    bool canEdit,
+    bool canDelete,
+    Map<String, dynamic> orderData,
+  ) {
+    final canCancel = _canCancelOrder(status);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -687,7 +836,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
               const Spacer(),
               if (status.toLowerCase() == 'pending')
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF10B981).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -736,8 +888,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                     ),
                   ),
                 ),
-              if (canEdit && canDelete) const SizedBox(width: 12),
-              if (canDelete)
+              if (canEdit && canCancel) const SizedBox(width: 12),
+              if (canCancel)
                 Expanded(
                   child: FutureBuilder<String>(
                     future: _fetchShopName(shopId),
@@ -746,12 +898,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                       return ElevatedButton.icon(
                         onPressed: () {
                           HapticFeedback.lightImpact();
-                          _showDeleteOrderDialog(orderId, shopName);
+                          _showCancelOrderDialog(orderId, shopName, status);
                         },
                         icon: const Icon(Icons.cancel_rounded, size: 16),
                         label: const Text('Cancel Order'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEF4444),
+                          backgroundColor: status.toLowerCase() == 'confirmed'
+                              ? Colors.orange
+                              : const Color(0xFFEF4444),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -814,9 +968,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                       if (orderTimestamp != null) ...[
                         const SizedBox(height: 2),
                         Text(
-                          DateFormat('MMM d, yyyy • h:mm a').format(
-                            orderTimestamp.toDate(),
-                          ),
+                          DateFormat(
+                            'MMM d, yyyy • h:mm a',
+                          ).format(orderTimestamp.toDate()),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -873,7 +1027,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    isDelivery 
+                    isDelivery
                         ? Icons.local_shipping_rounded
                         : Icons.store_mall_directory_rounded,
                     size: 16,
@@ -907,10 +1061,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -957,6 +1108,165 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       ),
     );
   }
+
+
+Widget _buildOrderStatusAndRemarks(
+  Map<String, dynamic> order,
+  Map<String, dynamic> statusStyle,
+  String status,
+) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Show remarks for confirmed orders
+      if (status.toLowerCase() == 'confirmed' &&
+          order['remarks'] != null &&
+          order['remarks'].toString().isNotEmpty) ...[
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10B981).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF10B981).withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.info_outline_rounded,
+                color: Color(0xFF10B981),
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Remarks',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF10B981),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      order['remarks'].toString(),
+                      style: const TextStyle(
+                        color: Color(0xFF059669),
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      
+      // Show cancellation reason for canceled orders
+      if ((status.toLowerCase() == 'canceled' || status.toLowerCase() == 'cancelled') &&
+          order['cancellationReason'] != null &&
+          order['cancellationReason'].toString().isNotEmpty) ...[
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEF4444).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFEF4444).withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.cancel_outlined,
+                color: Color(0xFFEF4444),
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Cancellation Reason',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFEF4444),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      order['cancellationReason'].toString(),
+                      style: const TextStyle(
+                        color: Color(0xFFDC2626),
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      
+      // Show completion message for delivered/picked up orders
+      if (status.toLowerCase() == 'delivered' || status.toLowerCase() == 'picked up') ...[
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF8B5CF6).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF8B5CF6).withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.check_circle_outline_rounded,
+                color: Color(0xFF8B5CF6),
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  status.toLowerCase() == 'delivered'
+                      ? 'This order has been delivered successfully'
+                      : 'This order has been picked up successfully',
+                  style: const TextStyle(
+                    color: Color(0xFF7C3AED),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ],
+  );
+}
+
 
   Widget _buildOrderItem(dynamic item) {
     final double itemPrice = (item['price'] as num? ?? 0.0).toDouble();

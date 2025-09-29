@@ -838,7 +838,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: Color(0xFF10B981)),
+          CircularProgressIndicator(color: Color(0xFF3B82F6)),
           SizedBox(height: 16),
           Text(
             'Loading user locations...',
@@ -857,7 +857,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF059669)],
+          colors: [Color(0xFF3B82F6), Color.fromARGB(255, 4, 98, 249)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -984,7 +984,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF10B981) : Colors.transparent,
+          color: isActive ? const Color(0xFF3B82F6) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -1022,7 +1022,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
         },
         decoration: InputDecoration(
           hintText: 'Search across all locations and users...',
-          prefixIcon: const Icon(Icons.search, color: Color(0xFF10B981)),
+          prefixIcon: const Icon(Icons.search, color: Color(0xFF3B82F6)),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear, color: Color(0xFF64748B)),
@@ -1048,7 +1048,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
+            borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
@@ -1339,7 +1339,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
                   );
                 },
                 icon: const Icon(Icons.add),
-                color: const Color(0xFF10B981),
+                color: const Color(0xFF3B82F6),
               ),
               Container(
                 width: double.infinity,
@@ -1354,7 +1354,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
                   );
                 },
                 icon: const Icon(Icons.remove),
-                color: const Color(0xFF10B981),
+                color: const Color(0xFF3B82F6),
               ),
             ],
           ),
@@ -1375,7 +1375,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
           child: IconButton(
             onPressed: _fitMarkersOnScreen,
             icon: const Icon(Icons.fit_screen),
-            color: const Color(0xFF10B981),
+            color: const Color(0xFF3B82F6),
             tooltip: 'Fit all markers',
           ),
         ),
@@ -1417,7 +1417,7 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
                 width: 16,
                 height: 16,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF10B981),
+                  color: Color(0xFF3B82F6),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.person, color: Colors.white, size: 12),
@@ -1515,13 +1515,13 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${stat.value}',
                     style: const TextStyle(
-                      color: Color(0xFF10B981),
+                      color: Color(0xFF3B82F6),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1570,13 +1570,13 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withOpacity(0.1),
+                      color: const Color(0xFF3B82F6).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       '${filteredData.length} results',
                       style: const TextStyle(
-                        color: Color(0xFF10B981),
+                        color: Color(0xFF3B82F6),
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1697,12 +1697,12 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     icon,
-                    color: const Color(0xFF10B981),
+                    color: const Color(0xFF3B82F6),
                     size: 20,
                   ),
                 ),
@@ -1722,13 +1722,13 @@ class _AdminUserLocationDashboardState extends State<AdminUserLocationDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${data['totalUsers'] ?? 0}',
                     style: const TextStyle(
-                      color: Color(0xFF10B981),
+                      color: Color(0xFF3B82F6),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),

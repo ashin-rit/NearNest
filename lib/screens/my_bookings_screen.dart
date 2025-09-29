@@ -50,6 +50,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           'backgroundColor': const Color(0xFF10B981).withOpacity(0.1),
           'icon': Icons.check_circle_rounded,
         };
+      case 'completed':
+        return {
+          'color': const Color(0xFF8B5CF6),
+          'backgroundColor': const Color(0xFF8B5CF6).withOpacity(0.1),
+          'icon': Icons.task_alt_rounded,
+        };
       case 'canceled':
       case 'cancelled':
         return {
@@ -92,7 +98,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   /// Show edit booking dialog
   Future<void> _showEditBookingDialog(Booking booking) async {
     DateTime? selectedDateTime = booking.bookingTime.toDate();
-    final TextEditingController _taskDescriptionController = 
+    final TextEditingController _taskDescriptionController =
         TextEditingController(text: booking.taskDescription ?? '');
 
     await showDialog(
@@ -100,7 +106,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -220,17 +228,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                 newBookingTime: selectedDateTime != null
                                     ? Timestamp.fromDate(selectedDateTime!)
                                     : null,
-                                newTaskDescription: _taskDescriptionController.text.isNotEmpty
+                                newTaskDescription:
+                                    _taskDescriptionController.text.isNotEmpty
                                     ? _taskDescriptionController.text
                                     : null,
                               );
-                              
+
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text('Booking updated successfully!'),
+                                  content: const Text(
+                                    'Booking updated successfully!',
+                                  ),
                                   backgroundColor: Colors.green[600],
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
                               );
                               Navigator.of(context).pop();
@@ -240,7 +253,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                   content: Text('Error updating booking: $e'),
                                   backgroundColor: Colors.red[600],
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
                               );
                             }
@@ -276,14 +291,16 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   /// Show cancel booking dialog
   Future<void> _showCancelBookingDialog(Booking booking) async {
-    final TextEditingController _reasonController = TextEditingController();
+    final bool isConfirmed = booking.status.toLowerCase() == 'confirmed';
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -307,54 +324,94 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: isConfirmed
+                          ? Colors.orange.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    child: const Icon(
-                      Icons.cancel_rounded,
-                      color: Colors.red,
+                    child: Icon(
+                      isConfirmed
+                          ? Icons.warning_amber_rounded
+                          : Icons.cancel_rounded,
+                      color: isConfirmed ? Colors.orange : Colors.red,
                       size: 30,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Cancel Booking',
-                    style: TextStyle(
+                  Text(
+                    isConfirmed
+                        ? 'Cancel Confirmed Booking?'
+                        : 'Cancel Booking',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF2D3748),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Are you sure you want to cancel this booking?',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: TextField(
-                      controller: _reasonController,
-                      decoration: const InputDecoration(
-                        labelText: 'Cancellation Reason (optional)',
-                        labelStyle: TextStyle(color: Color(0xFF718096)),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                        floatingLabelBehavior: FloatingLabelBehavior.always,
+
+                  // Warning message for confirmed bookings
+                  if (isConfirmed) ...[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.orange.withOpacity(0.3),
+                          width: 1.5,
+                        ),
                       ),
-                      maxLines: 3,
-                      style: const TextStyle(fontSize: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: Colors.orange[700],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Please Note',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange[700],
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildWarningPoint(
+                            'The service provider has confirmed this booking',
+                          ),
+                          const SizedBox(height: 8),
+                          _buildWarningPoint(
+                            'They may have already prepared for your service',
+                          ),
+                          const SizedBox(height: 8),
+                          _buildWarningPoint(
+                            'Late cancellations can impact the service provider',
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 30),
+                    const SizedBox(height: 24),
+                  ] else ...[
+                    Text(
+                      'Are you sure you want to cancel this booking?',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 30),
+                  ],
+
                   Row(
                     children: [
                       Expanded(
@@ -384,17 +441,19 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             try {
                               await _bookingService.cancelBooking(
                                 booking.id,
-                                cancellationReason: _reasonController.text.isNotEmpty
-                                    ? _reasonController.text
-                                    : 'Cancelled by user',
+                                cancellationReason: 'Cancelled by user',
                               );
-                              
+
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text('Booking cancelled successfully!'),
+                                  content: const Text(
+                                    'Booking cancelled successfully!',
+                                  ),
                                   backgroundColor: Colors.orange[600],
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
                               );
                               Navigator.of(context).pop();
@@ -404,13 +463,17 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                   content: Text('Error cancelling booking: $e'),
                                   backgroundColor: Colors.red[600],
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
                                 ),
                               );
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
+                            backgroundColor: isConfirmed
+                                ? Colors.orange
+                                : Colors.red,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -419,7 +482,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             elevation: 2,
                           ),
                           child: const Text(
-                            'Cancel Booking',
+                            'Confirm Cancellation',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -438,17 +501,52 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
+  // Helper widget for warning points
+  Widget _buildWarningPoint(String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '• ',
+          style: TextStyle(
+            color: Colors.orange[700],
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Colors.orange[800],
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Show delete booking confirmation dialog
   Future<void> _showDeleteBookingDialog(Booking booking) async {
+    final bool isCompleted = booking.status.toLowerCase() == 'completed';
+
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
-              Icon(Icons.delete_forever_rounded, color: Colors.red[600], size: 28),
+              Icon(
+                Icons.delete_forever_rounded,
+                color: Colors.red[600],
+                size: 28,
+              ),
               const SizedBox(width: 12),
               const Text(
                 'Delete Booking',
@@ -456,9 +554,11 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               ),
             ],
           ),
-          content: const Text(
-            'This will permanently delete this booking from your history. This action cannot be undone.',
-            style: TextStyle(fontSize: 16, height: 1.4),
+          content: Text(
+            isCompleted
+                ? 'This will permanently delete this completed booking from your history. This action cannot be undone.'
+                : 'This will permanently delete this booking from your history. This action cannot be undone.',
+            style: const TextStyle(fontSize: 16, height: 1.4),
           ),
           actions: [
             TextButton(
@@ -481,7 +581,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       content: const Text('Booking deleted permanently!'),
                       backgroundColor: Colors.red[600],
                       behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   );
                   Navigator.of(context).pop();
@@ -491,7 +593,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                       content: Text('Error deleting booking: $e'),
                       backgroundColor: Colors.red[600],
                       behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   );
                 }
@@ -499,7 +603,9 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red[600],
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text(
                 'Delete',
@@ -774,9 +880,17 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
   Widget _buildBookingCard(Booking booking) {
     final statusStyle = _getStatusStyle(booking.status);
-    final canEdit = _bookingService.canEditBooking(booking);
-    final canCancel = _bookingService.canCancelBooking(booking);
-    final canDelete = booking.status.toLowerCase() == 'canceled' || booking.status.toLowerCase() == 'cancelled';
+    final status = booking.status.toLowerCase();
+
+    // Only Pending bookings can be edited
+    final canEdit = status == 'pending';
+
+    // Pending or Confirmed can be cancelled (NOT Completed or Canceled)
+    final canCancel = status == 'confirmed';
+
+    // Only Completed or Canceled can be deleted
+    final canDelete =
+        status == 'pending';
 
     return Container(
       decoration: BoxDecoration(
@@ -821,7 +935,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     );
   }
 
-  Widget _buildActionButtons(Booking booking, bool canEdit, bool canCancel, bool canDelete) {
+  Widget _buildActionButtons(
+    Booking booking,
+    bool canEdit,
+    bool canCancel,
+    bool canDelete,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1249,6 +1368,42 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (booking.status.toLowerCase() == 'completed') ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: Color(0xFF8B5CF6),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'This service has been completed successfully',
+                    style: const TextStyle(
+                      color: Color(0xFF7C3AED),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      height: 1.4,
+                    ),
                   ),
                 ),
               ],

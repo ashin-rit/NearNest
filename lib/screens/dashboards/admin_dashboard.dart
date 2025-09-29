@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nearnest/screens/dashboards/user_management_screen.dart';
 import 'package:nearnest/services/auth_service.dart';
-import 'package:nearnest/screens/login_page.dart';
+import 'package:nearnest/screens/login/admin_login_page.dart';
 import 'package:nearnest/screens/dashboards/analytics_dashboard.dart';
 import 'package:nearnest/screens/dashboards/admin_booking_management_screen.dart';
 import 'package:nearnest/screens/dashboards/admin_notification_screen.dart';
@@ -48,7 +48,7 @@ class _AdminDashboardState extends State<AdminDashboard>
   Future<void> _logout() async {
     await _authService.signOut();
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginPage()),
+      MaterialPageRoute(builder: (context) => const AdminLoginPage()),
       (route) => false,
     );
   }
@@ -73,7 +73,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      colors: [Color(0xFF1F2937), Color(0xFF374151)],
                     ),
                   ),
                 ),
@@ -229,9 +229,9 @@ class _AdminDashboardState extends State<AdminDashboard>
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 1.3,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 1.8,
                               children: [
                                 _buildStatCard(
                                   title: 'Total Users',
@@ -322,33 +322,33 @@ class _AdminDashboardState extends State<AdminDashboard>
     return Container(
       decoration: BoxDecoration(
         gradient: gradient,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: gradient.colors.first.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: Colors.white, size: 28),
+              child: Icon(icon, color: Colors.white, size: 20),
             ),
             const Spacer(),
             Text(
               count.toString(),
               style: const TextStyle(
-                fontSize: 32,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -356,7 +356,7 @@ class _AdminDashboardState extends State<AdminDashboard>
             Text(
               title,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: Colors.white70,
               ),
@@ -382,7 +382,7 @@ class _AdminDashboardState extends State<AdminDashboard>
       {
         'title': 'User Locations',
         'subtitle': 'Explore where users are located',
-        'icon': Icons.analytics_rounded,
+        'icon': Icons.location_on,
         'color': const Color(0xFF3B82F6),
         'onTap': () => Navigator.push(
           context,

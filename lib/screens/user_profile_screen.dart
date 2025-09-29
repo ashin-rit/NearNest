@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:nearnest/screens/login_page.dart';
+import 'package:nearnest/screens/login/customer_login_page.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/screens/user_profile_edit_screen.dart';
 
@@ -110,7 +110,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       await _auth.signOut();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
+          MaterialPageRoute(builder: (context) => const CustomerLoginPage()),
           (Route<dynamic> route) => false,
         );
       }

@@ -61,14 +61,14 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard>
             color: Colors.white,
           ),
         ),
-        backgroundColor: const Color(0xFFB91C1C),
+        backgroundColor: const Color(0xFF6366F1),
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFB91C1C), Color(0xFFDC2626)],
+              colors: [Color(0xFF6366F1),Color(0xFF4F46E5)],
             ),
           ),
         ),

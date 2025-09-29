@@ -1,4 +1,5 @@
-// lib/screens/dashboards/service_provider_profile_edit_screen.dart
+// Enhanced service provider profile edit screen with day checkboxes and time validation
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,6 +25,8 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     with TickerProviderStateMixin {
   final AuthService _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
+  
+  // Controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -33,58 +36,49 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
   final TextEditingController _stateController = TextEditingController();
   final TextEditingController _pincodeController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  
   bool _isLoading = false;
   bool _isLocationLoading = false;
   double? _latitude;
   double? _longitude;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  
+  // Service hours with individual days
+  TimeOfDay? _startTime;
+  TimeOfDay? _endTime;
+  Map<String, bool> _selectedDays = {
+    'Monday': false,
+    'Tuesday': false,
+    'Wednesday': false,
+    'Thursday': false,
+    'Friday': false,
+    'Saturday': false,
+    'Sunday': false,
+  };
+  
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
-    _animationController.forward();
-
-    // Initialize form fields with existing data
-    _nameController.text = widget.initialData['name'] ?? '';
-    _emailController.text = widget.initialData['email'] ?? '';
-    _phoneController.text = widget.initialData['phone'] ?? '';
-    _categoryController.text = widget.initialData['category'] ?? '';
-    _streetAddressController.text = widget.initialData['streetAddress'] ?? '';
-    _cityController.text = widget.initialData['city'] ?? '';
-    _stateController.text = widget.initialData['state'] ?? '';
-    _pincodeController.text = widget.initialData['pincode'] ?? '';
-    _descriptionController.text = widget.initialData['description'] ?? '';
     
-    final GeoPoint? location = widget.initialData['location'] as GeoPoint?;
-    if (location != null) {
-      _latitude = location.latitude;
-      _longitude = location.longitude;
-    } else {
-      _latitude = widget.initialData['latitude'];
-      _longitude = widget.initialData['longitude'];
-    }
+    _initializeData();
+    _fadeController.forward();
+    _slideController.forward();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -97,69 +91,300 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     super.dispose();
   }
 
-  void _showSnackBar(String message, Color color) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
-      ),
+  void _initializeData() {
+    _nameController.text = widget.initialData['name'] ?? '';
+    _emailController.text = widget.initialData['email'] ?? '';
+    _phoneController.text = widget.initialData['phone'] ?? '';
+    _categoryController.text = widget.initialData['category'] ?? '';
+    _streetAddressController.text = widget.initialData['streetAddress'] ?? '';
+    _cityController.text = widget.initialData['city'] ?? '';
+    _stateController.text = widget.initialData['state'] ?? '';
+    _pincodeController.text = widget.initialData['pincode'] ?? '';
+    _descriptionController.text = widget.initialData['description'] ?? '';
+    
+    // Parse service hours if exists
+    String serviceHours = widget.initialData['service_hours'] ?? '';
+    if (serviceHours.isNotEmpty) {
+      _parseServiceHours(serviceHours);
+    }
+    
+    final GeoPoint? location = widget.initialData['location'] as GeoPoint?;
+    if (location != null) {
+      _latitude = location.latitude;
+      _longitude = location.longitude;
+    } else {
+      _latitude = widget.initialData['latitude'];
+      _longitude = widget.initialData['longitude'];
+    }
+  }
+
+  void _parseServiceHours(String serviceHours) {
+    try {
+      if (serviceHours.contains(':') && serviceHours.contains('-')) {
+        List<String> parts = serviceHours.split(':');
+        if (parts.length >= 2) {
+          String daysPart = parts[0].trim();
+          String timePart = parts[1].trim();
+          
+          // Parse days
+          if (daysPart.contains('Monday') && daysPart.contains('Friday')) {
+            // Monday - Friday
+            for (var day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
+              _selectedDays[day] = true;
+            }
+          } else if (daysPart.contains('Monday') && daysPart.contains('Saturday')) {
+            // Monday - Saturday
+            for (var day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']) {
+              _selectedDays[day] = true;
+            }
+          } else if (daysPart.toLowerCase().contains('all')) {
+            // All Days
+            _selectedDays.updateAll((key, value) => true);
+          } else if (daysPart.toLowerCase().contains('weekend')) {
+            // Weekends Only
+            _selectedDays['Saturday'] = true;
+            _selectedDays['Sunday'] = true;
+          } else {
+            // Individual days separated by comma
+            for (var day in daysPart.split(',')) {
+              String cleanDay = day.trim();
+              if (_selectedDays.containsKey(cleanDay)) {
+                _selectedDays[cleanDay] = true;
+              }
+            }
+          }
+          
+          // Parse times
+          if (timePart.contains('-')) {
+            List<String> times = timePart.split('-');
+            if (times.length == 2) {
+              _startTime = _parseTimeString(times[0].trim());
+              _endTime = _parseTimeString(times[1].trim());
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // If parsing fails, set default values
+      _startTime = const TimeOfDay(hour: 9, minute: 0);
+      _endTime = const TimeOfDay(hour: 18, minute: 0);
+      _selectedDays['Monday'] = true;
+      _selectedDays['Friday'] = true;
+    }
+  }
+
+  TimeOfDay? _parseTimeString(String timeStr) {
+    try {
+      timeStr = timeStr.replaceAll(' ', '');
+      bool isPM = timeStr.toLowerCase().contains('pm');
+      bool isAM = timeStr.toLowerCase().contains('am');
+      
+      String cleanTime = timeStr.replaceAll(RegExp(r'[apmAMP\s]'), '');
+      List<String> parts = cleanTime.split(':');
+      
+      if (parts.length == 2) {
+        int hour = int.parse(parts[0]);
+        int minute = int.parse(parts[1]);
+        
+        if (isPM && hour != 12) hour += 12;
+        if (isAM && hour == 12) hour = 0;
+        
+        return TimeOfDay(hour: hour, minute: minute);
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }
+
+  String _formatServiceHours() {
+    List<String> selectedDaysList = _selectedDays.entries
+        .where((entry) => entry.value)
+        .map((entry) => entry.key)
+        .toList();
+    
+    if (selectedDaysList.isEmpty || _startTime == null || _endTime == null) {
+      return '';
+    }
+    
+    String daysString = _formatDaysList(selectedDaysList);
+    return '$daysString: ${_startTime!.format(context)} - ${_endTime!.format(context)}';
+  }
+
+  String _formatDaysList(List<String> days) {
+    if (days.length == 7) {
+      return 'All Days';
+    } else if (days.length == 5 && 
+               days.contains('Monday') && 
+               days.contains('Tuesday') && 
+               days.contains('Wednesday') && 
+               days.contains('Thursday') && 
+               days.contains('Friday')) {
+      return 'Monday - Friday';
+    } else if (days.length == 6 && 
+               days.contains('Monday') && 
+               !days.contains('Sunday')) {
+      return 'Monday - Saturday';
+    } else if (days.length == 2 && 
+               days.contains('Saturday') && 
+               days.contains('Sunday')) {
+      return 'Weekends Only';
+    } else {
+      return days.join(', ');
+    }
+  }
+
+  String? _validateServiceHours() {
+    // Check if at least one day is selected
+    bool anyDaySelected = _selectedDays.values.any((selected) => selected);
+    if (!anyDaySelected) {
+      return 'Please select at least one working day';
+    }
+    
+    // Check if times are set
+    if (_startTime == null || _endTime == null) {
+      return 'Please set both start and end times';
+    }
+    
+    // Validate that end time is after start time
+    final startMinutes = _startTime!.hour * 60 + _startTime!.minute;
+    final endMinutes = _endTime!.hour * 60 + _endTime!.minute;
+    
+    if (endMinutes <= startMinutes) {
+      return 'End time must be after start time';
+    }
+    
+    // Check for reasonable working hours (at least 1 hour)
+    if (endMinutes - startMinutes < 60) {
+      return 'Service hours must be at least 1 hour';
+    }
+    
+    return null;
+  }
+
+  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: isStartTime 
+          ? (_startTime ?? const TimeOfDay(hour: 9, minute: 0))
+          : (_endTime ?? const TimeOfDay(hour: 18, minute: 0)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: Colors.white,
+              hourMinuteTextColor: const Color(0xFF0EA5E9),
+              dayPeriodTextColor: const Color(0xFF0EA5E9),
+              dialHandColor: const Color(0xFF0EA5E9),
+              dialBackgroundColor: const Color(0xFF0EA5E9).withOpacity(0.1),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
+    
+    if (picked != null) {
+      setState(() {
+        if (isStartTime) {
+          _startTime = picked;
+        } else {
+          _endTime = picked;
+        }
+      });
+      
+      // Show validation error if times are invalid
+      String? error = _validateServiceHours();
+      if (error != null && _startTime != null && _endTime != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.warning_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(error)),
+              ],
+            ),
+            backgroundColor: Colors.orange.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
+  void _toggleAllDays(bool value) {
+    setState(() {
+      _selectedDays.updateAll((key, _) => value);
+    });
+  }
+
+  void _toggleWeekdays() {
+    setState(() {
+      for (var day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
+        _selectedDays[day] = true;
+      }
+      _selectedDays['Saturday'] = false;
+      _selectedDays['Sunday'] = false;
+    });
+  }
+
+  void _toggleWeekends() {
+    setState(() {
+      _selectedDays['Saturday'] = true;
+      _selectedDays['Sunday'] = true;
+      for (var day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']) {
+        _selectedDays[day] = false;
+      }
+    });
   }
 
   Future<void> _updateLocation() async {
-    if (_isLocationLoading) return;
-    
     setState(() {
       _isLocationLoading = true;
     });
 
     try {
       Position position = await _determinePosition();
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude, 
-        position.longitude
-      );
-      
+      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks.first;
         setState(() {
-          _streetAddressController.text = place.street ?? _streetAddressController.text;
-          _cityController.text = place.locality ?? _cityController.text;
-          _stateController.text = place.administrativeArea ?? _stateController.text;
-          _pincodeController.text = place.postalCode ?? _pincodeController.text;
+          _streetAddressController.text = place.street ?? '';
+          _cityController.text = place.locality ?? '';
+          _stateController.text = place.administrativeArea ?? '';
+          _pincodeController.text = place.postalCode ?? '';
           _latitude = position.latitude;
           _longitude = position.longitude;
         });
-        _showSnackBar('Location updated successfully!', const Color(0xFF10B981));
-      } else {
-        _showSnackBar('Could not get address details', Colors.orange);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Location updated successfully!'),
+              backgroundColor: const Color(0xFF0EA5E9),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
       }
     } catch (e) {
-      String errorMessage;
-      if (e.toString().contains('Location services are disabled')) {
-        errorMessage = 'Please enable location services';
-      } else if (e.toString().contains('Location permissions are denied')) {
-        errorMessage = 'Please grant location permissions';
-      } else if (e.toString().contains('permanently denied')) {
-        errorMessage = 'Location permissions permanently denied. Please enable in settings.';
-      } else {
-        errorMessage = 'Failed to get location. Please try again.';
-      }
-      _showSnackBar(errorMessage, Colors.red);
-    } finally {
       if (mounted) {
-        setState(() {
-          _isLocationLoading = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red.shade400,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
       }
+    } finally {
+      setState(() {
+        _isLocationLoading = false;
+      });
     }
   }
 
@@ -167,7 +392,6 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Test if location services are enabled.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return Future.error('Location services are disabled.');
@@ -180,25 +404,39 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
         return Future.error('Location permissions are denied');
       }
     }
-    
+
     if (permission == LocationPermission.deniedForever) {
       return Future.error(
           'Location permissions are permanently denied, we cannot request permissions.');
     }
 
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-      timeLimit: const Duration(seconds: 10),
-    );
+    return await Geolocator.getCurrentPosition();
   }
 
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) {
-      _showSnackBar('Please fill in all required fields correctly', Colors.red);
       return;
     }
-
-    if (_isLoading) return;
+    
+    // Validate service hours
+    String? serviceHoursError = _validateServiceHours();
+    if (serviceHoursError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_rounded, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(serviceHoursError)),
+            ],
+          ),
+          backgroundColor: Colors.red.shade400,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -215,56 +453,64 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
         'state': _stateController.text.trim(),
         'pincode': _pincodeController.text.trim(),
         'description': _descriptionController.text.trim(),
+        'service_hours': _formatServiceHours(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // Geocoding validation for the complete address
       final fullAddress = '${_streetAddressController.text.trim()}, ${_cityController.text.trim()}, ${_stateController.text.trim()}, ${_pincodeController.text.trim()}';
+      List<Location> locations = await locationFromAddress(fullAddress);
       
-      try {
-        List<Location> locations = await locationFromAddress(fullAddress);
-        
-        if (locations.isNotEmpty) {
-          _latitude = locations.first.latitude;
-          _longitude = locations.first.longitude;
-          dataToUpdate['location'] = GeoPoint(_latitude!, _longitude!);
-          dataToUpdate['latitude'] = _latitude;
-          dataToUpdate['longitude'] = _longitude;
-        } else {
-          _showSnackBar('Could not validate address. Please check and try again.', Colors.orange);
-          setState(() {
-            _isLoading = false;
-          });
-          return;
+      if (locations.isNotEmpty) {
+        _latitude = locations.first.latitude;
+        _longitude = locations.first.longitude;
+        dataToUpdate['location'] = GeoPoint(_latitude!, _longitude!);
+        dataToUpdate['latitude'] = _latitude;
+        dataToUpdate['longitude'] = _longitude;
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Invalid address. Please enter a valid location.'),
+              backgroundColor: Colors.red.shade400,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
         }
-      } catch (geocodingError) {
-        // If geocoding fails, still update other fields but warn user
-        _showSnackBar('Address validation failed, but profile updated. Please verify your address.', Colors.orange);
-        if (_latitude != null && _longitude != null) {
-          dataToUpdate['location'] = GeoPoint(_latitude!, _longitude!);
-          dataToUpdate['latitude'] = _latitude;
-          dataToUpdate['longitude'] = _longitude;
-        }
-      }
-
-      await _authService.updateUserData(widget.userId, dataToUpdate);
-      
-      _showSnackBar('Profile updated successfully!', const Color(0xFF10B981));
-      
-      // Wait a bit before popping to show the success message
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
-    } catch (e) {
-      _showSnackBar('Failed to update profile: ${e.toString()}', Colors.red);
-    } finally {
-      if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        return;
       }
+      
+      await _authService.updateUserData(widget.userId, dataToUpdate);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Profile updated successfully!'),
+            backgroundColor: const Color(0xFF0EA5E9),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile: $e'),
+            backgroundColor: Colors.red.shade400,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -272,378 +518,87 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 140,
-            floating: false,
-            pinned: true,
-            backgroundColor: const Color(0xFF4F46E5),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              title: FadeTransition(
-                opacity: _fadeAnimation,
-                child: const Text(
-                  'Edit Profile',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+      appBar: AppBar(
+        title: const Text(
+          'Edit Service Profile',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1F2937),
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Color(0xFF1F2937)),
+        actions: [
+          if (!_isLoading)
+            Container(
+              margin: const EdgeInsets.only(right: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0EA5E9).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFF4F46E5),
-                      Color(0xFF6366F1),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.save_rounded,
+                  color: Color(0xFF0EA5E9),
+                ),
+                onPressed: _updateProfile,
+              ),
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? _buildLoadingState()
+          : FadeTransition(
+              opacity: _fadeController,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.1),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: _slideController,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      _buildWelcomeSection(),
+                      const SizedBox(height: 32),
+                      _buildBasicInfoSection(),
+                      const SizedBox(height: 24),
+                      _buildLocationSection(),
+                      const SizedBox(height: 24),
+                      _buildServiceDetailsSection(),
+                      const SizedBox(height: 32),
+                      _buildSaveButton(),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -30,
-                      top: -30,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(60),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: -50,
-                      bottom: -50,
-                      child: Container(
-                        width: 150,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(75),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0EA5E9)),
+            strokeWidth: 3,
           ),
-          SliverToBoxAdapter(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        // Personal Information Section
-                        _buildSectionCard(
-                          'Personal Information',
-                          Icons.person_outline,
-                          const Color(0xFF4F46E5),
-                          [
-                            _buildModernTextField(
-                              controller: _nameController,
-                              label: 'Full Name',
-                              icon: Icons.person,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your name';
-                                }
-                                if (value.trim().length < 2) {
-                                  return 'Name must be at least 2 characters';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _buildModernTextField(
-                              controller: _emailController,
-                              label: 'Email Address',
-                              icon: Icons.email,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your email';
-                                }
-                                final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                                if (!emailRegex.hasMatch(value.trim())) {
-                                  return 'Please enter a valid email address';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _buildModernTextField(
-                              controller: _phoneController,
-                              label: 'Phone Number',
-                              icon: Icons.phone,
-                              keyboardType: TextInputType.phone,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your phone number';
-                                }
-                                if (value.trim().length < 10) {
-                                  return 'Please enter a valid phone number';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        // Service Information Section
-                        _buildSectionCard(
-                          'Service Information',
-                          Icons.business_center_outlined,
-                          const Color(0xFF10B981),
-                          [
-                            _buildModernTextField(
-                              controller: _categoryController,
-                              label: 'Service Category',
-                              icon: Icons.category,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your service category';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _buildModernTextField(
-                              controller: _descriptionController,
-                              label: 'Service Description',
-                              icon: Icons.description,
-                              maxLines: 4,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter a description';
-                                }
-                                if (value.trim().length < 20) {
-                                  return 'Description must be at least 20 characters';
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        
-                        // Location Information Section
-                        _buildSectionCard(
-                          'Location Information',
-                          Icons.location_on_outlined,
-                          const Color(0xFFF59E0B),
-                          [
-                            _buildModernTextField(
-                              controller: _streetAddressController,
-                              label: 'Street Address',
-                              icon: Icons.home,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your street address';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildModernTextField(
-                                    controller: _cityController,
-                                    label: 'City',
-                                    icon: Icons.location_city,
-                                    validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
-                                        return 'Please enter city';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildModernTextField(
-                                    controller: _pincodeController,
-                                    label: 'Pincode',
-                                    icon: Icons.pin_drop,
-                                    keyboardType: TextInputType.number,
-                                    validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
-                                        return 'Please enter pincode';
-                                      }
-                                      if (value.trim().length != 6) {
-                                        return 'Please enter valid pincode';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildModernTextField(
-                              controller: _stateController,
-                              label: 'State',
-                              icon: Icons.map,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter state';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-                            Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
-                                color: const Color(0xFFF59E0B).withOpacity(0.1),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.info_outline,
-                                          color: const Color(0xFFF59E0B),
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        const Expanded(
-                                          child: Text(
-                                            'Update your location for better service discovery',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Color(0xFF92400E),
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: ElevatedButton.icon(
-                                        onPressed: _isLocationLoading ? null : _updateLocation,
-                                        icon: _isLocationLoading 
-                                            ? const SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                                ),
-                                              )
-                                            : const Icon(Icons.my_location),
-                                        label: Text(
-                                          _isLocationLoading 
-                                              ? 'Updating Location...' 
-                                              : 'Update to Current Location'
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFFF59E0B),
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 16),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          elevation: 0,
-                                          disabledBackgroundColor: const Color(0xFFF59E0B).withOpacity(0.6),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
-                        
-                        // Save Button
-                        Container(
-                          width: double.infinity,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF4F46E5).withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _updateProfile,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: _isLoading
-                                ? const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        ),
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Saving Changes...',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : const Text(
-                                    'Save Changes',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+          SizedBox(height: 16),
+          Text(
+            'Updating your profile...',
+            style: TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -651,7 +606,485 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     );
   }
 
-  Widget _buildSectionCard(String title, IconData icon, Color color, List<Widget> children) {
+  Widget _buildWelcomeSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0EA5E9), Color(0xFF38BDF8)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0EA5E9).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Update Your Profile',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Keep your service information up to date',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.edit_rounded,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBasicInfoSection() {
+    return _buildSection(
+      'Basic Information',
+      Icons.info_rounded,
+      const Color(0xFF0EA5E9),
+      [
+        _buildTextField(_nameController, 'Full Name', Icons.person_rounded),
+        _buildTextField(_emailController, 'Email', Icons.email_rounded, keyboardType: TextInputType.emailAddress),
+        _buildTextField(_phoneController, 'Phone Number', Icons.phone_rounded, keyboardType: TextInputType.phone),
+        _buildTextField(_categoryController, 'Service Category', Icons.category_rounded),
+      ],
+    );
+  }
+
+  Widget _buildLocationSection() {
+    return _buildSection(
+      'Location Details',
+      Icons.location_on_rounded,
+      const Color(0xFF10B981),
+      [
+        _buildTextField(_streetAddressController, 'Street Address', Icons.home_rounded),
+        Row(
+          children: [
+            Expanded(child: _buildTextField(_cityController, 'City', Icons.location_city_rounded)),
+            const SizedBox(width: 16),
+            Expanded(child: _buildTextField(_stateController, 'State', Icons.map_rounded)),
+          ],
+        ),
+        _buildTextField(_pincodeController, 'Pincode', Icons.pin_drop_rounded, keyboardType: TextInputType.number),
+        const SizedBox(height: 16),
+        _buildLocationButton(),
+      ],
+    );
+  }
+
+  Widget _buildServiceDetailsSection() {
+    return _buildSection(
+      'Service Details',
+      Icons.business_center_rounded,
+      const Color(0xFF3B82F6),
+      [
+        _buildTextField(_descriptionController, 'Service Description', Icons.description_rounded, maxLines: 3),
+        const SizedBox(height: 16),
+        _buildServiceHoursSection(),
+      ],
+    );
+  }
+
+  Widget _buildServiceHoursSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B82F6).withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.access_time_rounded,
+                  color: Color(0xFF3B82F6),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Service Hours',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          
+          // Quick select buttons
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickSelectButton(
+                  'Weekdays',
+                  Icons.work_outline_rounded,
+                  _toggleWeekdays,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickSelectButton(
+                  'Weekends',
+                  Icons.weekend_rounded,
+                  _toggleWeekends,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildQuickSelectButton(
+                  'All Days',
+                  Icons.calendar_month_rounded,
+                  () => _toggleAllDays(true),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Individual day checkboxes
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Select Working Days',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ..._selectedDays.keys.map((day) => _buildDayCheckbox(day)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // Time selection
+          Text(
+            'Operating Hours',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTimeSelector('Start Time', _startTime, true),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.grey[400],
+                  size: 20,
+                ),
+              ),
+              Expanded(
+                child: _buildTimeSelector('End Time', _endTime, false),
+              ),
+            ],
+          ),
+          
+          // Hours summary
+          if (_startTime != null && _endTime != null) ...[
+            const SizedBox(height: 16),
+            _buildHoursSummary(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickSelectButton(String label, IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: const Color(0xFF3B82F6)),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF3B82F6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDayCheckbox(String day) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedDays[day] = !_selectedDays[day]!;
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _selectedDays[day]! 
+                    ? const Color(0xFF0EA5E9) 
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: _selectedDays[day]! 
+                      ? const Color(0xFF0EA5E9) 
+                      : Colors.grey.shade400,
+                  width: 2,
+                ),
+              ),
+              child: _selectedDays[day]!
+                  ? const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                day,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: _selectedDays[day]! 
+                      ? FontWeight.w600 
+                      : FontWeight.w500,
+                  color: _selectedDays[day]! 
+                      ? const Color(0xFF1F2937) 
+                      : Colors.grey[600],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHoursSummary() {
+    final startMinutes = _startTime!.hour * 60 + _startTime!.minute;
+    final endMinutes = _endTime!.hour * 60 + _endTime!.minute;
+    final totalMinutes = endMinutes - startMinutes;
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+    
+    bool isValid = totalMinutes > 0;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isValid
+              ? [const Color(0xFF0EA5E9).withOpacity(0.1), const Color(0xFF38BDF8).withOpacity(0.1)]
+              : [Colors.red.shade50, Colors.orange.shade50],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isValid 
+              ? const Color(0xFF0EA5E9).withOpacity(0.3)
+              : Colors.red.shade300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isValid ? Icons.check_circle_rounded : Icons.warning_rounded,
+                color: isValid ? const Color(0xFF0EA5E9) : Colors.red.shade600,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isValid ? 'Schedule Summary' : 'Invalid Time Selection',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isValid ? const Color(0xFF0EA5E9) : Colors.red.shade600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (isValid) ...[
+            const SizedBox(height: 12),
+            Text(
+              _formatServiceHours(),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.schedule_rounded, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 6),
+                Text(
+                  'Total: $hours hour${hours != 1 ? 's' : ''}${minutes > 0 ? ' $minutes min' : ''}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            Text(
+              'End time must be after start time',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.red.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeSelector(String label, TimeOfDay? selectedTime, bool isStartTime) {
+    return InkWell(
+      onTap: () => _selectTime(context, isStartTime),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selectedTime != null 
+                ? const Color(0xFF0EA5E9).withOpacity(0.3)
+                : Colors.grey.shade300,
+            width: selectedTime != null ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.access_time_rounded,
+                  size: 20,
+                  color: selectedTime != null 
+                      ? const Color(0xFF0EA5E9) 
+                      : Colors.grey[400],
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  selectedTime?.format(context) ?? '--:--',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: selectedTime != null 
+                        ? const Color(0xFF1F2937) 
+                        : Colors.grey[400],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(String title, IconData icon, Color color, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -672,26 +1105,25 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
             Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: color, size: 24),
+                  child: Icon(icon, color: color, size: 20),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1F2937),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             ...children,
           ],
         ),
@@ -699,41 +1131,141 @@ class _ServiceProviderProfileEditScreenState extends State<ServiceProviderProfil
     );
   }
 
-  Widget _buildModernTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
     int maxLines = 1,
     TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        color: const Color(0xFFF9FAFB),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextFormField(
         controller: controller,
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        validator: validator,
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: const Color(0xFF6B7280)),
-          border: InputBorder.none,
+          prefixIcon: Icon(icon, color: Colors.grey[600], size: 20),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.grey.shade50,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          labelStyle: const TextStyle(color: Color(0xFF6B7280)),
-          errorStyle: const TextStyle(
-            color: Colors.red,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+        ),
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF1F2937),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter the $label';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  Widget _buildLocationButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF059669)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ElevatedButton.icon(
+        onPressed: _isLocationLoading ? null : _updateLocation,
+        icon: _isLocationLoading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Icon(Icons.my_location_rounded, size: 20),
+        label: Text(
+          _isLocationLoading ? 'Getting Location...' : 'Update to Current Location',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
           ),
         ),
-        style: const TextStyle(
-          fontSize: 16,
-          color: Color(0xFF1F2937),
-          fontWeight: FontWeight.w500,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0EA5E9), Color(0xFF38BDF8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0EA5E9).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: _isLoading ? null : _updateProfile,
+        icon: _isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Icon(Icons.save_rounded, size: 24),
+        label: Text(
+          _isLoading ? 'Saving Changes...' : 'Save Changes',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
     );

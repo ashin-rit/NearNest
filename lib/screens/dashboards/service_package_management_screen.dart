@@ -77,12 +77,12 @@ class _ServicePackageManagementScreenState
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4F46E5).withOpacity(0.1),
+                    color: const Color(0xFF0EA5E9).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(30),
                   ),
                   child: const Icon(
                     Icons.business_center,
-                    color: Color(0xFF4F46E5),
+                    color: Color(0xFF0EA5E9),
                     size: 30,
                   ),
                 ),
@@ -112,7 +112,7 @@ class _ServicePackageManagementScreenState
                 _buildModernTextField(
                   controller: priceController,
                   label: 'Price',
-                  icon: Icons.attach_money,
+                  icon: Icons.currency_rupee,
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 32),
@@ -179,7 +179,7 @@ class _ServicePackageManagementScreenState
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
+                          backgroundColor: const Color(0xFF0EA5E9),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -373,7 +373,7 @@ class _ServicePackageManagementScreenState
             color: Colors.white,
           ),
         ),
-        backgroundColor: const Color(0xFF4F46E5),
+        backgroundColor: const Color(0xFF0EA5E9),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -415,13 +415,13 @@ class _ServicePackageManagementScreenState
                     width: 120,
                     height: 120,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4F46E5).withOpacity(0.1),
+                      color: const Color(0xFF0EA5E9).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(60),
                     ),
                     child: const Icon(
                       Icons.business_center_outlined,
                       size: 60,
-                      color: Color(0xFF4F46E5),
+                      color: Color(0xFF0EA5E9),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -478,12 +478,12 @@ class _ServicePackageManagementScreenState
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF4F46E5).withOpacity(0.1),
+                              color: const Color(0xFF0EA5E9).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
                               Icons.business_center,
-                              color: Color(0xFF4F46E5),
+                              color: Color(0xFF0EA5E9),
                               size: 24,
                             ),
                           ),
@@ -502,7 +502,7 @@ class _ServicePackageManagementScreenState
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '\$${(data['price'] ?? 0.0).toStringAsFixed(2)}',
+                                  '\₹${(data['price'] ?? 0.0).toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -571,7 +571,7 @@ class _ServicePackageManagementScreenState
         scale: _fabAnimation,
         child: FloatingActionButton.extended(
           onPressed: () => _showPackageDialog(),
-          backgroundColor: const Color(0xFF4F46E5),
+          backgroundColor: const Color(0xFF0EA5E9),
           foregroundColor: Colors.white,
           elevation: 8,
           icon: const Icon(Icons.add),
