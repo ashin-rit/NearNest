@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/screens/dashboards/admin_dashboard.dart';
+import 'package:nearnest/services/one_signal_service.dart';
 
 class AdminLoginPage extends StatefulWidget {
   const AdminLoginPage({super.key});
@@ -66,37 +67,22 @@ class _AdminLoginPageState extends State<AdminLoginPage>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.elasticOut,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.elasticOut),
+        );
 
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
-    _shakeAnimation = Tween<double>(
-      begin: -10.0,
-      end: 10.0,
-    ).animate(CurvedAnimation(
-      parent: _shakeController,
-      curve: Curves.elasticIn,
-    ));
+    _shakeAnimation = Tween<double>(begin: -10.0, end: 10.0).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
+    );
 
     _fadeController.forward();
     _slideController.forward();
@@ -127,12 +113,15 @@ class _AdminLoginPageState extends State<AdminLoginPage>
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
       ),
-      backgroundColor: isError 
+      backgroundColor: isError
           ? const Color(0xFFDC2626).withOpacity(0.9)
           : primaryColor.withOpacity(0.9),
       behavior: SnackBarBehavior.floating,
@@ -168,7 +157,10 @@ class _AdminLoginPageState extends State<AdminLoginPage>
   Future<void> _handleLogin() async {
     if (isLocked) {
       _shakeController.forward().then((_) => _shakeController.reset());
-      _showSnackBar('Account temporarily locked due to failed attempts. Please wait.', isError: true);
+      _showSnackBar(
+        'Account temporarily locked due to failed attempts. Please wait.',
+        isError: true,
+      );
       return;
     }
 
@@ -188,6 +180,9 @@ class _AdminLoginPageState extends State<AdminLoginPage>
 
       final userUid = userCredential.user?.uid;
       if (userUid != null) {
+        await OneSignalService.setExternalId(userUid);
+        await OneSignalService.savePlayerIdToFirestoreForUid(userUid);
+
         final userDoc = await _authService.getUserDataByUid(userUid);
 
         if (userDoc.exists && userDoc.data() != null) {
@@ -197,7 +192,10 @@ class _AdminLoginPageState extends State<AdminLoginPage>
           if (role != 'Admin') {
             await _authService.signOut();
             _incrementFailedAttempts();
-            _showSnackBar('Access denied. Admin credentials required.', isError: true);
+            _showSnackBar(
+              'Access denied. Admin credentials required.',
+              isError: true,
+            );
             return;
           }
 
@@ -207,15 +205,16 @@ class _AdminLoginPageState extends State<AdminLoginPage>
           });
 
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const AdminDashboard(),
-            ),
+            MaterialPageRoute(builder: (context) => const AdminDashboard()),
           );
           _showSnackBar('Welcome, Administrator!', isError: false);
         } else {
           await _authService.signOut();
           _incrementFailedAttempts();
-          _showSnackBar('Admin credentials not found. Contact system administrator.', isError: true);
+          _showSnackBar(
+            'Admin credentials not found. Contact system administrator.',
+            isError: true,
+          );
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -260,7 +259,8 @@ class _AdminLoginPageState extends State<AdminLoginPage>
         message = 'Please enter a valid email address.';
         break;
       case 'user-disabled':
-        message = 'Admin account has been disabled. Contact system administrator.';
+        message =
+            'Admin account has been disabled. Contact system administrator.';
         break;
       case 'too-many-requests':
         message = 'Too many login attempts. Please try again later.';
@@ -274,7 +274,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    
+
     return Scaffold(
       body: Stack(
         children: [
@@ -294,10 +294,10 @@ class _AdminLoginPageState extends State<AdminLoginPage>
               ),
             ),
           ),
-          
+
           // Security-themed floating elements
           ...List.generate(8, (index) => _buildSecurityShape(index)),
-          
+
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -331,7 +331,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
               ),
             ),
           ),
-          
+
           if (isLoading) _buildSecureLoadingOverlay(),
         ],
       ),
@@ -349,10 +349,10 @@ class _AdminLoginPageState extends State<AdminLoginPage>
       Icons.gpp_good,
       Icons.fingerprint,
     ];
-    
+
     final random = (index * 137) % 100;
     final left = (random / 100) * MediaQuery.of(context).size.width;
-    
+
     return AnimatedBuilder(
       animation: _pulseController,
       builder: (context, child) {
@@ -439,7 +439,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
             },
           ),
           const SizedBox(height: 28),
-          
+
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [Colors.white, Colors.white.withOpacity(0.8)],
@@ -456,7 +456,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
             ),
           ),
           const SizedBox(height: 12),
-          
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
@@ -475,11 +475,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.security_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
+                Icon(Icons.security_rounded, color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   'Secure Platform Management',
@@ -492,7 +488,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
               ],
             ),
           ),
-          
+
           if (isLocked)
             Container(
               margin: const EdgeInsets.only(top: 20),
@@ -500,7 +496,10 @@ class _AdminLoginPageState extends State<AdminLoginPage>
               decoration: BoxDecoration(
                 color: Colors.orange.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: Colors.orange.withOpacity(0.6), width: 2),
+                border: Border.all(
+                  color: Colors.orange.withOpacity(0.6),
+                  width: 2,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.orange.withOpacity(0.3),
@@ -512,7 +511,11 @@ class _AdminLoginPageState extends State<AdminLoginPage>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.warning_rounded, color: Colors.orange.shade700, size: 20),
+                  Icon(
+                    Icons.warning_rounded,
+                    color: Colors.orange.shade700,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Account Temporarily Locked',
@@ -547,10 +550,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
               ],
             ),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.4),
-              width: 2,
-            ),
+            border: Border.all(color: Colors.white.withOpacity(0.4), width: 2),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.2),
@@ -587,7 +587,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
                   ],
                 ),
                 const SizedBox(height: 32),
-                
+
                 _buildSecureTextField(
                   controller: _emailController,
                   hint: 'Administrator Email',
@@ -596,7 +596,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 20),
-                
+
                 _buildSecureTextField(
                   controller: _passwordController,
                   hint: 'Secure Password',
@@ -604,11 +604,14 @@ class _AdminLoginPageState extends State<AdminLoginPage>
                   validator: _validatePassword,
                   isPassword: true,
                 ),
-                
+
                 if (failedAttempts > 0 && !isLocked)
                   Container(
                     margin: const EdgeInsets.only(top: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.orange.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
@@ -617,7 +620,11 @@ class _AdminLoginPageState extends State<AdminLoginPage>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.warning_rounded, color: Colors.orange.shade700, size: 16),
+                        Icon(
+                          Icons.warning_rounded,
+                          color: Colors.orange.shade700,
+                          size: 16,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'Failed attempts: $failedAttempts/3',
@@ -630,7 +637,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
                       ],
                     ),
                   ),
-                
+
                 const SizedBox(height: 32),
                 _buildSecureLoginButton(),
               ],
@@ -678,14 +685,14 @@ class _AdminLoginPageState extends State<AdminLoginPage>
             fontWeight: FontWeight.w400,
           ),
           filled: true,
-          fillColor: isLocked 
-              ? Colors.grey[200]!.withOpacity(0.9) 
+          fillColor: isLocked
+              ? Colors.grey[200]!.withOpacity(0.9)
               : Colors.white.withOpacity(0.95),
           prefixIcon: Container(
             margin: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: isLocked 
+                colors: isLocked
                     ? [Colors.grey[400]!, Colors.grey[500]!]
                     : [primaryColor, accentColor],
               ),
@@ -696,10 +703,14 @@ class _AdminLoginPageState extends State<AdminLoginPage>
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
-                    showPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                    showPassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
                     color: isLocked ? Colors.grey[600] : Colors.grey[600],
                   ),
-                  onPressed: isLocked ? null : () => setState(() => showPassword = !showPassword),
+                  onPressed: isLocked
+                      ? null
+                      : () => setState(() => showPassword = !showPassword),
                 )
               : null,
           border: OutlineInputBorder(
@@ -718,7 +729,10 @@ class _AdminLoginPageState extends State<AdminLoginPage>
             borderRadius: BorderRadius.circular(16),
             borderSide: const BorderSide(color: Color(0xFFDC2626), width: 2),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 20,
+          ),
         ),
       ),
     );
@@ -731,20 +745,21 @@ class _AdminLoginPageState extends State<AdminLoginPage>
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: isLocked 
+          colors: isLocked
               ? [Colors.grey[400]!, Colors.grey[500]!]
               : isLoading
-                  ? [Colors.grey[400]!, Colors.grey[500]!]
-                  : [primaryColor, accentColor],
+              ? [Colors.grey[400]!, Colors.grey[500]!]
+              : [primaryColor, accentColor],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          if (!isLocked && !isLoading) BoxShadow(
-            color: primaryColor.withOpacity(0.4),
-            spreadRadius: 0,
-            blurRadius: 25,
-            offset: const Offset(0, 12),
-          ),
+          if (!isLocked && !isLoading)
+            BoxShadow(
+              color: primaryColor.withOpacity(0.4),
+              spreadRadius: 0,
+              blurRadius: 25,
+              offset: const Offset(0, 12),
+            ),
         ],
       ),
       child: ElevatedButton(
@@ -783,9 +798,9 @@ class _AdminLoginPageState extends State<AdminLoginPage>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isLocked ? Icons.lock_rounded : Icons.security_rounded, 
-                    color: Colors.white, 
-                    size: 22
+                    isLocked ? Icons.lock_rounded : Icons.security_rounded,
+                    color: Colors.white,
+                    size: 22,
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -821,7 +836,11 @@ class _AdminLoginPageState extends State<AdminLoginPage>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.info_outline_rounded, color: Colors.white.withOpacity(0.8), size: 16),
+                Icon(
+                  Icons.info_outline_rounded,
+                  color: Colors.white.withOpacity(0.8),
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'All admin activities are logged and monitored',
@@ -836,8 +855,13 @@ class _AdminLoginPageState extends State<AdminLoginPage>
           ),
           const SizedBox(height: 16),
           TextButton.icon(
-            onPressed: () => Navigator.of(context).pushReplacementNamed('/landing'),
-            icon: const Icon(Icons.arrow_back_ios_rounded, size: 18, color: Colors.white),
+            onPressed: () =>
+                Navigator.of(context).pushReplacementNamed('/landing'),
+            icon: const Icon(
+              Icons.arrow_back_ios_rounded,
+              size: 18,
+              color: Colors.white,
+            ),
             label: Text(
               'Back to Role Selection',
               style: TextStyle(
@@ -889,11 +913,7 @@ class _AdminLoginPageState extends State<AdminLoginPage>
                       strokeWidth: 4,
                     ),
                   ),
-                  Icon(
-                    Icons.security_rounded,
-                    color: primaryColor,
-                    size: 24,
-                  ),
+                  Icon(Icons.security_rounded, color: primaryColor, size: 24),
                 ],
               ),
               const SizedBox(height: 24),

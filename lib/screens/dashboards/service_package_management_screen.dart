@@ -12,7 +12,8 @@ class ServicePackageManagementScreen extends StatefulWidget {
 }
 
 class _ServicePackageManagementScreenState
-    extends State<ServicePackageManagementScreen> with TickerProviderStateMixin {
+    extends State<ServicePackageManagementScreen>
+    with TickerProviderStateMixin {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   late AnimationController _fabAnimationController;
@@ -41,19 +42,24 @@ class _ServicePackageManagementScreenState
   }
 
   Future<void> _showPackageDialog({DocumentSnapshot? doc}) async {
-    final TextEditingController nameController =
-        TextEditingController(text: doc?['name'] ?? '');
-    final TextEditingController descriptionController =
-        TextEditingController(text: doc?['description'] ?? '');
-    final TextEditingController priceController =
-        TextEditingController(text: doc?['price']?.toString() ?? '');
+    final TextEditingController nameController = TextEditingController(
+      text: doc?['name'] ?? '',
+    );
+    final TextEditingController descriptionController = TextEditingController(
+      text: doc?['description'] ?? '',
+    );
+    final TextEditingController priceController = TextEditingController(
+      text: doc?['price']?.toString() ?? '',
+    );
 
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
@@ -143,29 +149,41 @@ class _ServicePackageManagementScreenState
                         onPressed: () async {
                           final String name = nameController.text;
                           final String description = descriptionController.text;
-                          final double price = double.tryParse(priceController.text) ?? 0.0;
+                          final double price =
+                              double.tryParse(priceController.text) ?? 0.0;
 
                           if (name.isNotEmpty && price > 0) {
                             try {
                               if (doc == null) {
-                                await _firestore.collection('service_packages').add({
-                                  'name': name,
-                                  'description': description,
-                                  'price': price,
-                                  'serviceProviderId': currentUserId,
-                                  'createdAt': FieldValue.serverTimestamp(),
-                                });
+                                await _firestore
+                                    .collection('service_packages')
+                                    .add({
+                                      'name': name,
+                                      'description': description,
+                                      'price': price,
+                                      'serviceProviderId': currentUserId,
+                                      'createdAt': FieldValue.serverTimestamp(),
+                                    });
                                 if (mounted) {
-                                  _showSnackBar('Package added successfully!', Colors.green);
+                                  _showSnackBar(
+                                    'Package added successfully!',
+                                    Colors.green,
+                                  );
                                 }
                               } else {
-                                await _firestore.collection('service_packages').doc(doc.id).update({
-                                  'name': name,
-                                  'description': description,
-                                  'price': price,
-                                });
+                                await _firestore
+                                    .collection('service_packages')
+                                    .doc(doc.id)
+                                    .update({
+                                      'name': name,
+                                      'description': description,
+                                      'price': price,
+                                    });
                                 if (mounted) {
-                                  _showSnackBar('Package updated successfully!', Colors.blue);
+                                  _showSnackBar(
+                                    'Package updated successfully!',
+                                    Colors.blue,
+                                  );
                                 }
                               }
                               if (mounted) {
@@ -173,7 +191,10 @@ class _ServicePackageManagementScreenState
                               }
                             } catch (e) {
                               if (mounted) {
-                                _showSnackBar('Failed to save package: $e', Colors.red);
+                                _showSnackBar(
+                                  'Failed to save package: $e',
+                                  Colors.red,
+                                );
                               }
                             }
                           }
@@ -227,7 +248,10 @@ class _ServicePackageManagementScreenState
           labelText: label,
           prefixIcon: Icon(icon, color: const Color(0xFF6B7280)),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           labelStyle: const TextStyle(color: Color(0xFF6B7280)),
         ),
       ),
@@ -264,12 +288,12 @@ class _ServicePackageManagementScreenState
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-            ),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(24)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -299,10 +323,7 @@ class _ServicePackageManagementScreenState
                 const Text(
                   'Are you sure you want to delete this service package? This action cannot be undone.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -368,12 +389,17 @@ class _ServicePackageManagementScreenState
       appBar: AppBar(
         title: const Text(
           'Service Packages',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0EA5E9), Color(0xFF38BDF8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
         ),
-        backgroundColor: const Color(0xFF0EA5E9),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
@@ -436,10 +462,7 @@ class _ServicePackageManagementScreenState
                   const SizedBox(height: 8),
                   const Text(
                     'Create your first service package to get started',
-                    style: TextStyle(
-                      color: Color(0xFF6B7280),
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
                   ),
                 ],
               ),
@@ -521,7 +544,11 @@ class _ServicePackageManagementScreenState
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                    size: 20,
+                                  ),
                                   onPressed: () => _showPackageDialog(doc: doc),
                                 ),
                               ),
@@ -532,15 +559,21 @@ class _ServicePackageManagementScreenState
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                                  onPressed: () => _showDeleteConfirmation(doc.id),
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                  onPressed: () =>
+                                      _showDeleteConfirmation(doc.id),
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                      if (data['description'] != null && data['description'].toString().isNotEmpty) ...[
+                      if (data['description'] != null &&
+                          data['description'].toString().isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Container(
                           width: double.infinity,

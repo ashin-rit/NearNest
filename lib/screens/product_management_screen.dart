@@ -7,7 +7,8 @@ class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key});
 
   @override
-  State<ProductManagementScreen> createState() => _ProductManagementScreenState();
+  State<ProductManagementScreen> createState() =>
+      _ProductManagementScreenState();
 }
 
 class _ProductManagementScreenState extends State<ProductManagementScreen>
@@ -53,15 +54,31 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
 
   Future<void> _showAddEditProductDialog([DocumentSnapshot? productDoc]) async {
     final isEditing = productDoc != null;
-    final data = isEditing ? Map<String, dynamic>.from(productDoc!.data() as Map<dynamic, dynamic>) : <String, dynamic>{};
-    
-    final productNameController = TextEditingController(text: data['name'] ?? '');
-    final priceController = TextEditingController(text: data['price']?.toString() ?? '');
-    final descriptionController = TextEditingController(text: data['description'] ?? '');
-    final categoryController = TextEditingController(text: data['category'] ?? '');
-    final imageUrlController = TextEditingController(text: data['imageUrl'] ?? '');
-    final stockQuantityController = TextEditingController(text: data['stockQuantity']?.toString() ?? '10');
-    final minStockLevelController = TextEditingController(text: data['minStockLevel']?.toString() ?? '5');
+    final data = isEditing
+        ? Map<String, dynamic>.from(productDoc!.data() as Map<dynamic, dynamic>)
+        : <String, dynamic>{};
+
+    final productNameController = TextEditingController(
+      text: data['name'] ?? '',
+    );
+    final priceController = TextEditingController(
+      text: data['price']?.toString() ?? '',
+    );
+    final descriptionController = TextEditingController(
+      text: data['description'] ?? '',
+    );
+    final categoryController = TextEditingController(
+      text: data['category'] ?? '',
+    );
+    final imageUrlController = TextEditingController(
+      text: data['imageUrl'] ?? '',
+    );
+    final stockQuantityController = TextEditingController(
+      text: data['stockQuantity']?.toString() ?? '10',
+    );
+    final minStockLevelController = TextEditingController(
+      text: data['minStockLevel']?.toString() ?? '5',
+    );
     bool isActive = data['isActive'] ?? data['isAvailable'] ?? true;
 
     final formKey = GlobalKey<FormState>();
@@ -72,9 +89,14 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         return StatefulBuilder(
           builder: (context, setState) {
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
               child: Container(
-                constraints: const BoxConstraints(maxWidth: 400, maxHeight: 700),
+                constraints: const BoxConstraints(
+                  maxWidth: 400,
+                  maxHeight: 700,
+                ),
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -89,11 +111,15 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF6366F1).withOpacity(0.1),
+                                  color: const Color(
+                                    0xFF6366F1,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
-                                  isEditing ? Icons.edit_rounded : Icons.add_rounded,
+                                  isEditing
+                                      ? Icons.edit_rounded
+                                      : Icons.add_rounded,
                                   color: const Color(0xFF6366F1),
                                   size: 20,
                                 ),
@@ -110,7 +136,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                             ],
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Basic Product Info
                           _buildDialogTextField(
                             productNameController,
@@ -142,21 +168,27 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                             ],
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // Inventory Section
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: const Color(0xFF10B981).withOpacity(0.05),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
+                              border: Border.all(
+                                color: const Color(0xFF10B981).withOpacity(0.2),
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Row(
                                   children: [
-                                    Icon(Icons.inventory_rounded, color: Color(0xFF10B981), size: 18),
+                                    Icon(
+                                      Icons.inventory_rounded,
+                                      color: Color(0xFF10B981),
+                                      size: 18,
+                                    ),
                                     SizedBox(width: 8),
                                     Text(
                                       'Inventory Management',
@@ -177,20 +209,33 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                                         decoration: InputDecoration(
                                           labelText: 'Stock Quantity',
                                           hintText: 'Available units',
-                                          prefixIcon: const Icon(Icons.inventory_2_rounded, size: 18),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                          prefixIcon: const Icon(
+                                            Icons.inventory_2_rounded,
+                                            size: 18,
                                           ),
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 12,
+                                              ),
                                         ),
                                         keyboardType: TextInputType.number,
-                                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                        ],
                                         validator: (value) {
                                           if (value == null || value.isEmpty) {
                                             return 'Required';
                                           }
                                           final quantity = int.tryParse(value);
-                                          if (quantity == null || quantity < 0) {
+                                          if (quantity == null ||
+                                              quantity < 0) {
                                             return 'Invalid quantity';
                                           }
                                           return null;
@@ -204,14 +249,26 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                                         decoration: InputDecoration(
                                           labelText: 'Alert Level',
                                           hintText: 'Min stock',
-                                          prefixIcon: const Icon(Icons.warning_rounded, size: 18),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(12),
+                                          prefixIcon: const Icon(
+                                            Icons.warning_rounded,
+                                            size: 18,
                                           ),
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 12,
+                                              ),
                                         ),
                                         keyboardType: TextInputType.number,
-                                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                        ],
                                         validator: (value) {
                                           if (value == null || value.isEmpty) {
                                             return 'Required';
@@ -241,10 +298,14 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        isActive ? 'Product is active and can be sold' : 'Product is inactive (hidden from customers)',
+                                        isActive
+                                            ? 'Product is active and can be sold'
+                                            : 'Product is inactive (hidden from customers)',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: isActive ? const Color(0xFF10B981) : Colors.grey[600],
+                                          color: isActive
+                                              ? const Color(0xFF10B981)
+                                              : Colors.grey[600],
                                         ),
                                       ),
                                     ),
@@ -253,7 +314,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                               ],
                             ),
                           ),
-                          
+
                           const SizedBox(height: 16),
                           _buildDialogTextField(
                             descriptionController,
@@ -270,7 +331,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                             'Enter image URL',
                             keyboardType: TextInputType.url,
                           ),
-                          
+
                           const SizedBox(height: 20),
                           Container(
                             height: 120,
@@ -286,8 +347,12 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                                     child: Image.network(
                                       imageUrlController.text,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          const Center(
+                                      errorBuilder:
+                                          (
+                                            context,
+                                            error,
+                                            stackTrace,
+                                          ) => const Center(
                                             child: Icon(
                                               Icons.image_not_supported_rounded,
                                               size: 40,
@@ -298,7 +363,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                                   )
                                 : const Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Icon(
                                           Icons.image_rounded,
@@ -324,11 +390,15 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                                 child: OutlinedButton(
                                   onPressed: () => Navigator.of(context).pop(),
                                   style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    side: BorderSide(color: Colors.grey.shade300),
+                                    side: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                   child: const Text('Cancel'),
                                 ),
@@ -342,12 +412,19 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                                         isEditing,
                                         productDoc,
                                         productNameController.text.trim(),
-                                        double.tryParse(priceController.text) ?? 0.0,
+                                        double.tryParse(priceController.text) ??
+                                            0.0,
                                         descriptionController.text.trim(),
                                         categoryController.text.trim(),
                                         imageUrlController.text.trim(),
-                                        int.tryParse(stockQuantityController.text) ?? 0,
-                                        int.tryParse(minStockLevelController.text) ?? 5,
+                                        int.tryParse(
+                                              stockQuantityController.text,
+                                            ) ??
+                                            0,
+                                        int.tryParse(
+                                              minStockLevelController.text,
+                                            ) ??
+                                            5,
                                         isActive,
                                         data,
                                       );
@@ -357,12 +434,18 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF6366F1),
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  child: Text(isEditing ? 'Update Product' : 'Add Product'),
+                                  child: Text(
+                                    isEditing
+                                        ? 'Update Product'
+                                        : 'Add Product',
+                                  ),
                                 ),
                               ),
                             ],
@@ -408,7 +491,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         ),
         filled: true,
         fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
       ),
       keyboardType: keyboardType,
       maxLines: maxLines,
@@ -450,18 +536,25 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
 
     try {
       if (isEditing) {
-        await _firestore.collection('products').doc(productDoc!.id).update(productData);
+        await _firestore
+            .collection('products')
+            .doc(productDoc!.id)
+            .update(productData);
       } else {
         await _firestore.collection('products').add(productData);
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Product ${isEditing ? 'updated' : 'added'} successfully!'),
+            content: Text(
+              'Product ${isEditing ? 'updated' : 'added'} successfully!',
+            ),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -469,10 +562,14 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to ${isEditing ? 'update' : 'add'} product: $e'),
+            content: Text(
+              'Failed to ${isEditing ? 'update' : 'add'} product: $e',
+            ),
             backgroundColor: Colors.red.shade400,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -529,7 +626,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
               ),
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -547,18 +647,25 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
               final addQuantity = int.tryParse(restockController.text);
               if (addQuantity != null && addQuantity > 0) {
                 try {
-                  await _firestore.collection('products').doc(productDoc.id).update({
-                    'stockQuantity': currentStock + addQuantity,
-                    'lastUpdated': FieldValue.serverTimestamp(),
-                  });
+                  await _firestore
+                      .collection('products')
+                      .doc(productDoc.id)
+                      .update({
+                        'stockQuantity': currentStock + addQuantity,
+                        'lastUpdated': FieldValue.serverTimestamp(),
+                      });
                   Navigator.pop(context);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Added $addQuantity units to $productName'),
+                        content: Text(
+                          'Added $addQuantity units to $productName',
+                        ),
                         backgroundColor: const Color(0xFF10B981),
                         behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     );
                   }
@@ -568,7 +675,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                       content: Text('Failed to restock: $e'),
                       backgroundColor: Colors.red.shade400,
                       behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   );
                 }
@@ -592,12 +701,17 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       appBar: AppBar(
         title: const Text(
           'Product Management',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
         ),
-        backgroundColor: const Color(0xFF6366F1),
         elevation: 0,
         centerTitle: true,
       ),
@@ -635,11 +749,17 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF6366F1),
+                          width: 2,
+                        ),
                       ),
                       filled: true,
                       fillColor: Colors.grey.shade50,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -650,15 +770,22 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const SizedBox();
-                      
+
                       final categories = snapshot.data!.docs
-                          .map((doc) => (doc.data() as Map<String, dynamic>)['category'] as String?)
-                          .where((category) => category != null && category.isNotEmpty)
+                          .map(
+                            (doc) =>
+                                (doc.data() as Map<String, dynamic>)['category']
+                                    as String?,
+                          )
+                          .where(
+                            (category) =>
+                                category != null && category.isNotEmpty,
+                          )
                           .toSet()
                           .toList();
-                      
+
                       if (categories.isEmpty) return const SizedBox();
-                      
+
                       return SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -668,29 +795,39 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                               selected: _selectedCategory == null,
                               onSelected: (selected) {
                                 setState(() {
-                                  _selectedCategory = selected ? null : _selectedCategory;
+                                  _selectedCategory = selected
+                                      ? null
+                                      : _selectedCategory;
                                 });
                               },
                               backgroundColor: Colors.grey.shade100,
-                              selectedColor: const Color(0xFF6366F1).withOpacity(0.2),
+                              selectedColor: const Color(
+                                0xFF6366F1,
+                              ).withOpacity(0.2),
                               checkmarkColor: const Color(0xFF6366F1),
                             ),
                             const SizedBox(width: 8),
-                            ...categories.map((category) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: FilterChip(
-                                label: Text(category!),
-                                selected: _selectedCategory == category,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    _selectedCategory = selected ? category : null;
-                                  });
-                                },
-                                backgroundColor: Colors.grey.shade100,
-                                selectedColor: const Color(0xFF6366F1).withOpacity(0.2),
-                                checkmarkColor: const Color(0xFF6366F1),
+                            ...categories.map(
+                              (category) => Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: FilterChip(
+                                  label: Text(category!),
+                                  selected: _selectedCategory == category,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      _selectedCategory = selected
+                                          ? category
+                                          : null;
+                                    });
+                                  },
+                                  backgroundColor: Colors.grey.shade100,
+                                  selectedColor: const Color(
+                                    0xFF6366F1,
+                                  ).withOpacity(0.2),
+                                  checkmarkColor: const Color(0xFF6366F1),
+                                ),
                               ),
-                            )),
+                            ),
                           ],
                         ),
                       );
@@ -752,10 +889,12 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                     final data = doc.data() as Map<String, dynamic>;
                     final name = data['name']?.toString().toLowerCase() ?? '';
                     final category = data['category']?.toString() ?? '';
-                    
+
                     final matchesSearch = name.contains(_searchQuery);
-                    final matchesCategory = _selectedCategory == null || category == _selectedCategory;
-                    
+                    final matchesCategory =
+                        _selectedCategory == null ||
+                        category == _selectedCategory;
+
                     return matchesSearch && matchesCategory;
                   }).toList();
 
@@ -789,7 +928,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                     itemBuilder: (context, index) {
                       final doc = filteredDocs[index];
                       final data = doc.data() as Map<String, dynamic>;
-                      
+
                       return _buildProductCard(doc, data);
                     },
                   );
@@ -818,11 +957,11 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     final isActive = data['isActive'] ?? data['isAvailable'] ?? true;
     final isLowStock = stockQuantity <= minStockLevel && stockQuantity > 0;
     final isOutOfStock = stockQuantity <= 0;
-    
+
     Color stockColor;
     String stockText;
     IconData stockIcon;
-    
+
     if (!isActive) {
       stockColor = Colors.grey.shade600;
       stockText = 'Inactive';
@@ -840,7 +979,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       stockText = 'In Stock ($stockQuantity available)';
       stockIcon = Icons.check_circle_rounded;
     }
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -849,7 +988,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           color: Colors.white,
-          border: !isActive ? Border.all(color: Colors.grey.shade300, width: 2) : null,
+          border: !isActive
+              ? Border.all(color: Colors.grey.shade300, width: 2)
+              : null,
         ),
         child: Column(
           children: [
@@ -857,24 +998,28 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
                   child: Container(
                     height: 200,
                     width: double.infinity,
-                    child: data['imageUrl'] != null && data['imageUrl'].isNotEmpty
+                    child:
+                        data['imageUrl'] != null && data['imageUrl'].isNotEmpty
                         ? Image.network(
                             data['imageUrl'],
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: Colors.grey.shade100,
-                              child: const Center(
-                                child: Icon(
-                                  Icons.image_not_supported_rounded,
-                                  size: 50,
-                                  color: Colors.grey,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  color: Colors.grey.shade100,
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.image_not_supported_rounded,
+                                      size: 50,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
                           )
                         : Container(
                             color: Colors.grey.shade100,
@@ -892,7 +1037,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                   top: 12,
                   right: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: stockColor,
                       borderRadius: BorderRadius.circular(12),
@@ -907,11 +1055,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          stockIcon,
-                          size: 14,
-                          color: Colors.white,
-                        ),
+                        Icon(stockIcon, size: 14, color: Colors.white),
                         const SizedBox(width: 4),
                         Text(
                           stockQuantity.toString(),
@@ -945,7 +1089,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: isActive ? const Color(0xFF1F2937) : Colors.grey.shade600,
+                                color: isActive
+                                    ? const Color(0xFF1F2937)
+                                    : Colors.grey.shade600,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -954,14 +1100,19 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: isActive ? const Color(0xFF10B981) : Colors.grey.shade500,
+                                color: isActive
+                                    ? const Color(0xFF10B981)
+                                    : Colors.grey.shade500,
                               ),
                             ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: stockColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -969,11 +1120,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              stockIcon,
-                              size: 14,
-                              color: stockColor,
-                            ),
+                            Icon(stockIcon, size: 14, color: stockColor),
                             const SizedBox(width: 4),
                             Text(
                               stockText,
@@ -988,10 +1135,14 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                       ),
                     ],
                   ),
-                  if (data['category'] != null && data['category'].isNotEmpty) ...[
+                  if (data['category'] != null &&
+                      data['category'].isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF6366F1).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -1006,7 +1157,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                       ),
                     ),
                   ],
-                  if (data['description'] != null && data['description'].isNotEmpty) ...[
+                  if (data['description'] != null &&
+                      data['description'].isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
                       data['description'],
@@ -1026,7 +1178,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                         child: OutlinedButton.icon(
                           onPressed: () => _showAddEditProductDialog(doc),
                           icon: const Icon(Icons.edit_rounded, size: 16),
-                          label: const Text('Edit', style: TextStyle(fontSize: 12)),
+                          label: const Text(
+                            'Edit',
+                            style: TextStyle(fontSize: 12),
+                          ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF6366F1),
                             side: const BorderSide(color: Color(0xFF6366F1)),
@@ -1043,7 +1198,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                           child: ElevatedButton.icon(
                             onPressed: () => _showRestockDialog(doc),
                             icon: const Icon(Icons.add_box_rounded, size: 16),
-                            label: const Text('Restock', style: TextStyle(fontSize: 12)),
+                            label: const Text(
+                              'Restock',
+                              style: TextStyle(fontSize: 12),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF10B981),
                               foregroundColor: Colors.white,
@@ -1059,7 +1217,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                           child: ElevatedButton.icon(
                             onPressed: () => _toggleProductStatus(doc),
                             icon: Icon(
-                              isActive ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                              isActive
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
                               size: 16,
                             ),
                             label: Text(
@@ -1067,7 +1227,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
                               style: const TextStyle(fontSize: 12),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: isActive ? Colors.orange : const Color(0xFF10B981),
+                              backgroundColor: isActive
+                                  ? Colors.orange
+                                  : const Color(0xFF10B981),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -1103,7 +1265,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
   Future<void> _toggleProductStatus(DocumentSnapshot productDoc) async {
     final data = productDoc.data() as Map<String, dynamic>;
     final currentStatus = data['isActive'] ?? data['isAvailable'] ?? true;
-    
+
     try {
       await _firestore.collection('products').doc(productDoc.id).update({
         'isActive': !currentStatus,
@@ -1117,7 +1279,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
             content: Text('Failed to update product status: $e'),
             backgroundColor: Colors.red.shade400,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -1158,10 +1322,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
               const SizedBox(height: 8),
               Text(
                 'Are you sure you want to delete this product? This action cannot be undone.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -1211,7 +1372,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
               content: const Text('Product deleted successfully!'),
               backgroundColor: const Color(0xFF10B981),
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         }
@@ -1222,7 +1385,9 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
               content: Text('Failed to delete product: $e'),
               backgroundColor: Colors.red.shade400,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         }

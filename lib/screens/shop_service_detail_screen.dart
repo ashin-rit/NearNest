@@ -11,6 +11,10 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:intl/intl.dart';
 import 'package:nearnest/widgets/reviews_section.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:nearnest/services/one_signal_notification_sender.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+
 
 class ShopServiceDetailScreen extends StatefulWidget {
   final String itemId;
@@ -99,185 +103,235 @@ Future<void> _openMap(double latitude, double longitude, String customerName) as
   }
 
   Future<void> _showBookingDialog(ServicePackage package) async {
-    DateTime? selectedDateTime;
-    String? taskDescription;
-    final _taskDescriptionController = TextEditingController();
+  DateTime? selectedDateTime;
+  final _taskDescriptionController = TextEditingController();
 
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+  await showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header with icon
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Icon(
+                    Icons.calendar_today_rounded,
+                    color: Theme.of(context).primaryColor,
+                    size: 30,
+                  ),
                 ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header with icon
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Icon(
-                      Icons.calendar_today_rounded,
-                      color: Theme.of(context).primaryColor,
-                      size: 30,
-                    ),
+                const SizedBox(height: 16),
+                Text(
+                  'Book ${package.name}',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D3748),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Book ${package.name}',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3748),
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please select your preferred date and time',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    height: 1.4,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Please select your preferred date and time',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
                   ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: DateTimePicker(
-                      onDateTimeChanged: (dateTime) {
-                        selectedDateTime = dateTime;
-                      },
-                    ),
+                  child: DateTimePicker(
+                    onDateTimeChanged: (dateTime) {
+                      selectedDateTime = dateTime;
+                    },
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: TextField(
-                      controller: _taskDescriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Task Description (optional)',
-                        labelStyle: TextStyle(color: Color(0xFF718096)),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                        floatingLabelBehavior: FloatingLabelBehavior.always,
-                      ),
-                      maxLines: 3,
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
                   ),
-                  const SizedBox(height: 30),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(color: Colors.grey[300]!),
-                            ),
+                  child: TextField(
+                    controller: _taskDescriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Task Description (optional)',
+                      labelStyle: TextStyle(color: Color(0xFF718096)),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(16),
+                      floatingLabelBehavior: FloatingLabelBehavior.always,
+                    ),
+                    maxLines: 3,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey[300]!),
                           ),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF718096),
-                            ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF718096),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (selectedDateTime != null) {
-                              await _bookingService.createBooking(
-                                serviceProviderId: widget.itemId,
-                                serviceName: package.name,
-                                bookingTime: Timestamp.fromDate(selectedDateTime!),
-                                taskDescription: _taskDescriptionController.text.isNotEmpty ? _taskDescriptionController.text : null,
-                                servicePrice: package.price,
-                                serviceDuration: package.durationInMinutes,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (selectedDateTime != null) {
+                            // Get customer name for notification
+                            final user = FirebaseAuth.instance.currentUser;
+                            if (user == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Please log in to book a service.'),
+                                  backgroundColor: Colors.red[600],
+                                ),
                               );
+                              return;
+                            }
+
+                            final userDoc = await _firestore
+                                .collection('users')
+                                .doc(user.uid)
+                                .get();
+                            final customerName = userDoc.data()?['name'] ?? 'A customer';
+
+                            // Create booking - NOW IT RETURNS THE BOOKING ID
+                            final bookingId = await _bookingService.createBooking(
+                              serviceProviderId: widget.itemId,
+                              serviceName: package.name,
+                              bookingTime: Timestamp.fromDate(selectedDateTime!),
+                              taskDescription: _taskDescriptionController.text.isNotEmpty 
+                                  ? _taskDescriptionController.text 
+                                  : null,
+                              servicePrice: package.price,
+                              serviceDuration: package.durationInMinutes,
+                            );
+
+                            // 🔔 SEND NOTIFICATION TO SERVICE PROVIDER
+                            if (bookingId != null) {
+                              final formattedTime = DateFormat('MMM dd, yyyy at hh:mm a')
+                                  .format(selectedDateTime!);
+                              
+                              await OneSignalNotificationSender.notifyServiceProviderOfNewBooking(
+                                serviceProviderId: widget.itemId,
+                                customerName: customerName,
+                                serviceName: package.name,
+                                bookingTime: formattedTime,
+                                bookingId: bookingId,
+                              );
+                              
+                              print('✅ Notification sent to service provider');
+                              
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: const Text('Booking request sent successfully!'),
                                   backgroundColor: Colors.green[600],
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
                                 ),
                               );
-                              Navigator.of(context).pop();
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text('Please select a date and time.'),
-                                  backgroundColor: Colors.orange[600],
+                                  content: const Text('Failed to create booking. Please try again.'),
+                                  backgroundColor: Colors.red[600],
                                   behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
                                 ),
                               );
                             }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
+                            
+                            Navigator.of(context).pop();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Please select a date and time.'),
+                                backgroundColor: Colors.orange[600],
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            'Confirm Booking',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          elevation: 2,
+                        ),
+                        child: const Text(
+                          'Confirm Booking',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {

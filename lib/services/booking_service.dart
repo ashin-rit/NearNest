@@ -8,7 +8,7 @@ class BookingService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Method to create a new booking
-  Future<void> createBooking({
+  Future<String?> createBooking({
     required String serviceProviderId,
     required String serviceName,
     required Timestamp bookingTime,
@@ -37,6 +37,7 @@ class BookingService {
     );
 
     await bookingRef.set(newBooking.toMap());
+    return bookingRef.id;
   }
 
   // Method to update booking details (edit functionality)
@@ -135,8 +136,8 @@ class BookingService {
 
     // Only allow deletion of cancelled bookings
     final currentStatus = bookingData['status']?.toLowerCase();
-    if (currentStatus != 'canceled' && currentStatus != 'cancelled') {
-      throw Exception('Only cancelled bookings can be permanently deleted.');
+    if (currentStatus != 'pending' ) {
+      throw Exception('Only pending bookings can be permanently deleted.');
     }
 
     await _firestore.collection('bookings').doc(bookingId).delete();

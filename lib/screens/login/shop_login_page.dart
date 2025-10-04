@@ -2,9 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nearnest/screens/awaiting_approval_page.dart';
-import 'package:nearnest/screens/common_widgets.dart';
 import 'package:nearnest/services/auth_service.dart';
 import 'package:nearnest/screens/dashboards/shop_dashboard.dart';
+import 'package:nearnest/services/one_signal_service.dart';
 
 class ShopLoginPage extends StatefulWidget {
   const ShopLoginPage({super.key});
@@ -30,15 +30,15 @@ class _ShopLoginPageState extends State<ShopLoginPage>
   bool isLoading = false;
   bool showPassword = false;
 
-  // Enhanced shop color palette with retail theme
+  // NEW: Purple/Violet color palette for retail/shop theme
   final List<Color> gradientColors = [
-    const Color(0xFF92400E), // Amber-brown
-    const Color(0xFFB45309), // Orange-brown  
-    const Color(0xFFD97706), // Amber-orange
-    const Color(0xFFF59E0B), // Amber
+    const Color(0xFF4C1D95), // Deep purple
+    const Color(0xFF6D28D9), // Violet
+    const Color(0xFF7C3AED), // Purple
+    const Color(0xFF8B5CF6), // Light purple
   ];
-  final Color primaryColor = const Color(0xFF92400E);
-  final Color accentColor = const Color(0xFFF59E0B);
+  final Color primaryColor = const Color(0xFF6D28D9);
+  final Color accentColor = const Color(0xFF8B5CF6);
 
   @override
   void initState() {
@@ -60,29 +60,18 @@ class _ShopLoginPageState extends State<ShopLoginPage>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.elasticOut,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.elasticOut),
+        );
 
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
     _fadeController.forward();
     _slideController.forward();
@@ -112,12 +101,15 @@ class _ShopLoginPageState extends State<ShopLoginPage>
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
       ),
-      backgroundColor: isError 
+      backgroundColor: isError
           ? const Color(0xFFE53E3E).withOpacity(0.9)
           : primaryColor.withOpacity(0.9),
       behavior: SnackBarBehavior.floating,
@@ -168,6 +160,8 @@ class _ShopLoginPageState extends State<ShopLoginPage>
       final userUid = userCredential.user?.uid;
       if (userUid != null) {
         final userDoc = await _authService.getUserDataByUid(userUid);
+        await OneSignalService.setExternalId(userUid);
+        await OneSignalService.savePlayerIdToFirestoreForUid(userUid);
 
         if (userDoc.exists && userDoc.data() != null) {
           final userData = userDoc.data() as Map<String, dynamic>;
@@ -176,7 +170,10 @@ class _ShopLoginPageState extends State<ShopLoginPage>
 
           if (role != 'Shop') {
             await _authService.signOut();
-            _showSnackBar('Access denied. Please use the correct login page for your role.', isError: true);
+            _showSnackBar(
+              'Access denied. Please use the correct login page for your role.',
+              isError: true,
+            );
             return;
           }
 
@@ -190,20 +187,24 @@ class _ShopLoginPageState extends State<ShopLoginPage>
           }
 
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => const ShopDashboard(),
-            ),
+            MaterialPageRoute(builder: (context) => const ShopDashboard()),
           );
           _showSnackBar('Welcome back to your shop dashboard!', isError: false);
         } else {
           await _authService.signOut();
-          _showSnackBar('Shop data not found. Please contact support.', isError: true);
+          _showSnackBar(
+            'Shop data not found. Please contact support.',
+            isError: true,
+          );
         }
       }
     } on FirebaseAuthException catch (e) {
       _handleFirebaseError(e);
     } catch (e) {
-      _showSnackBar('An unknown error occurred. Please try again.', isError: true);
+      _showSnackBar(
+        'An unknown error occurred. Please try again.',
+        isError: true,
+      );
     } finally {
       setState(() {
         isLoading = false;
@@ -222,7 +223,8 @@ class _ShopLoginPageState extends State<ShopLoginPage>
         message = 'Please enter a valid email address.';
         break;
       case 'user-disabled':
-        message = 'Your shop account has been disabled. Please contact support.';
+        message =
+            'Your shop account has been disabled. Please contact support.';
         break;
       case 'too-many-requests':
         message = 'Too many login attempts. Please try again later.';
@@ -236,7 +238,7 @@ class _ShopLoginPageState extends State<ShopLoginPage>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    
+
     return Scaffold(
       body: Stack(
         children: [
@@ -256,10 +258,10 @@ class _ShopLoginPageState extends State<ShopLoginPage>
               ),
             ),
           ),
-          
+
           // Retail-themed floating shapes
           ...List.generate(6, (index) => _buildRetailShape(index)),
-          
+
           SafeArea(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -287,7 +289,7 @@ class _ShopLoginPageState extends State<ShopLoginPage>
               ),
             ),
           ),
-          
+
           if (isLoading) _buildLoadingOverlay(),
         ],
       ),
@@ -303,10 +305,10 @@ class _ShopLoginPageState extends State<ShopLoginPage>
       Icons.storefront_rounded,
       Icons.shopping_cart_rounded,
     ];
-    
+
     final random = (index * 167) % 100;
     final left = (random / 100) * MediaQuery.of(context).size.width;
-    
+
     return AnimatedBuilder(
       animation: _pulseController,
       builder: (context, child) {
@@ -398,7 +400,7 @@ class _ShopLoginPageState extends State<ShopLoginPage>
             },
           ),
           const SizedBox(height: 26),
-          
+
           ShaderMask(
             shaderCallback: (bounds) => LinearGradient(
               colors: [Colors.white, Colors.white.withOpacity(0.8)],
@@ -415,7 +417,7 @@ class _ShopLoginPageState extends State<ShopLoginPage>
             ),
           ),
           const SizedBox(height: 8),
-          
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(
@@ -429,11 +431,7 @@ class _ShopLoginPageState extends State<ShopLoginPage>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.trending_up_rounded,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                Icon(Icons.trending_up_rounded, color: Colors.white, size: 16),
                 const SizedBox(width: 6),
                 Text(
                   'Grow Your Retail Business Online',
@@ -561,9 +559,7 @@ class _ShopLoginPageState extends State<ShopLoginPage>
           prefixIcon: Container(
             margin: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [primaryColor, accentColor],
-              ),
+              gradient: LinearGradient(colors: [primaryColor, accentColor]),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: Colors.white, size: 20),
@@ -571,7 +567,9 @@ class _ShopLoginPageState extends State<ShopLoginPage>
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
-                    showPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                    showPassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
                     color: Colors.grey[600],
                   ),
                   onPressed: () => setState(() => showPassword = !showPassword),
@@ -593,7 +591,10 @@ class _ShopLoginPageState extends State<ShopLoginPage>
             borderRadius: BorderRadius.circular(16),
             borderSide: const BorderSide(color: Color(0xFFE53E3E), width: 2),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 20,
+          ),
         ),
       ),
     );
@@ -606,18 +607,19 @@ class _ShopLoginPageState extends State<ShopLoginPage>
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: isLoading 
+          colors: isLoading
               ? [Colors.grey[400]!, Colors.grey[500]!]
               : [primaryColor, accentColor],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          if (!isLoading) BoxShadow(
-            color: accentColor.withOpacity(0.4),
-            spreadRadius: 0,
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
+          if (!isLoading)
+            BoxShadow(
+              color: accentColor.withOpacity(0.4),
+              spreadRadius: 0,
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
         ],
       ),
       child: ElevatedButton(
@@ -655,7 +657,11 @@ class _ShopLoginPageState extends State<ShopLoginPage>
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.storefront_rounded, color: Colors.white, size: 20),
+                  const Icon(
+                    Icons.storefront_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   const Text(
                     'Open Shop Dashboard',
@@ -720,16 +726,18 @@ class _ShopLoginPageState extends State<ShopLoginPage>
     );
   }
 
-  Widget _buildSocialButton(String text, IconData icon, Color bgColor, Color textColor) {
+  Widget _buildSocialButton(
+    String text,
+    IconData icon,
+    Color bgColor,
+    Color textColor,
+  ) {
     return Container(
       height: 52,
       decoration: BoxDecoration(
         color: bgColor.withOpacity(0.9),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -769,9 +777,14 @@ class _ShopLoginPageState extends State<ShopLoginPage>
 
   Widget _buildForgotPasswordLink() {
     return TextButton(
-      onPressed: isLoading ? null : () {
-        _showSnackBar('Reset password link sent to email!', isError: false);
-      },
+      onPressed: isLoading
+          ? null
+          : () {
+              _showSnackBar(
+                'Reset password link sent to email!',
+                isError: false,
+              );
+            },
       style: TextButton.styleFrom(
         foregroundColor: Colors.white.withOpacity(0.9),
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -793,15 +806,14 @@ class _ShopLoginPageState extends State<ShopLoginPage>
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
       ),
       child: TextButton(
-        onPressed: isLoading ? null : () {
-          Navigator.of(context).pushNamed('/shop_registration');
-        },
+        onPressed: isLoading
+            ? null
+            : () {
+                Navigator.of(context).pushNamed('/shop_registration');
+              },
         style: TextButton.styleFrom(
           foregroundColor: Colors.white,
           padding: EdgeInsets.zero,
@@ -835,7 +847,11 @@ class _ShopLoginPageState extends State<ShopLoginPage>
       opacity: _fadeAnimation,
       child: TextButton.icon(
         onPressed: () => Navigator.of(context).pushReplacementNamed('/landing'),
-        icon: const Icon(Icons.arrow_back_ios_rounded, size: 18, color: Colors.white),
+        icon: const Icon(
+          Icons.arrow_back_ios_rounded,
+          size: 18,
+          color: Colors.white,
+        ),
         label: Text(
           'Back to Role Selection',
           style: TextStyle(
@@ -872,10 +888,7 @@ class _ShopLoginPageState extends State<ShopLoginPage>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(
-                color: primaryColor,
-                strokeWidth: 3,
-              ),
+              CircularProgressIndicator(color: primaryColor, strokeWidth: 3),
               const SizedBox(height: 20),
               Text(
                 'Opening your shop...',

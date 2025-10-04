@@ -3,6 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 
+// Import splash screen
+import 'package:nearnest/screens/splash_screen.dart';
+
 // Import the new landing page and separate login pages
 import 'package:nearnest/screens/landing_page.dart';
 import 'package:nearnest/screens/login/admin_login_page.dart';
@@ -20,13 +23,18 @@ import 'package:nearnest/screens/cart_screen.dart';
 import 'package:nearnest/screens/checkout_screen.dart';
 import 'package:nearnest/services/shopping_cart_service.dart';
 
+// Import notification channel setup
+import 'package:nearnest/services/notification_channel_setup.dart';
+
 
 void main() async {
-  // Ensure that Flutter widgets are initialized
   WidgetsFlutterBinding.ensureInitialized();
-
+  
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Initialize notification channel for Android 8.0+
+  await NotificationChannelSetup.initialize();
 
   runApp(const MyApp());
 }
@@ -42,8 +50,8 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'NearNest - Connect with Local Services',
-        // Change the home to the new landing page
-        home: const LandingPage(),
+        // Changed home to SplashScreen
+        home: const SplashScreen(),
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: Colors.blue,
@@ -51,6 +59,9 @@ class MyApp extends StatelessWidget {
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
         routes: {
+          // Add splash screen route
+          '/splash': (context) => const SplashScreen(),
+          
           // New landing and login routes
           '/landing': (context) => const LandingPage(),
           '/admin-login': (context) => const AdminLoginPage(),
@@ -61,18 +72,18 @@ class MyApp extends StatelessWidget {
           // Keep your existing registration routes
           '/customer_registration': (context) => const CustomerRegisterPage(),
           '/services_registration': (context) => const ServiceProviderRegisterPage(),
-          '/shop_registration': (context) => const ShopsRegisterPage(), // Note: kept your original route name
+          '/shop_registration': (context) => const ShopsRegisterPage(),
           
           // Keep your existing cart and checkout routes
           '/cart_screen': (context) => const CartScreen(),
           '/checkout_screen': (context) => const CheckoutScreen(),
-          
-
         },
         
         // Handle route generation for better navigation
         onGenerateRoute: (RouteSettings settings) {
           switch (settings.name) {
+            case '/splash':
+              return _createRoute(const SplashScreen());
             case '/landing':
               return _createRoute(const LandingPage());
             case '/admin-login':

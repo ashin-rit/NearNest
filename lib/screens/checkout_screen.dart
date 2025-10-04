@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:nearnest/models/order_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nearnest/models/cart_item_model.dart';
+import 'package:nearnest/services/one_signal_notification_sender.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -321,112 +322,128 @@ class _CheckoutScreenState extends State<CheckoutScreen>
     }
   }
 
-  Future<void> _placeAllOrders(BuildContext context) async {
-    final user = FirebaseAuth.instance.currentUser;
-    final cart = Provider.of<ShoppingCartService>(context, listen: false);
+Future<void> _placeAllOrders(BuildContext context) async {
+  final user = FirebaseAuth.instance.currentUser;
+  final cart = Provider.of<ShoppingCartService>(context, listen: false);
 
-    if (user == null || cart.items.isEmpty) {
-      _showErrorSnackBar('Cannot place empty orders. Please add items to your cart.');
-      return;
-    }
+  if (user == null || cart.items.isEmpty) {
+    _showErrorSnackBar('Cannot place empty orders. Please add items to your cart.');
+    return;
+  }
 
-    setState(() {
-      _isPlacingOrders = true;
-    });
+  setState(() {
+    _isPlacingOrders = true;
+  });
 
-    try {
-      // Final stock validation before placing orders
-      final validation = await _inventoryService.validateStock(cart.itemsList);
-      
-      if (!validation['isValid']) {
-        setState(() {
-          _isPlacingOrders = false;
-        });
-        _showStockErrorDialog(validation);
-        return;
-      }
-
-      final itemsByShop = cart.itemsByShop;
-      final List<String> successfulOrders = [];
-      final List<String> failedOrders = [];
-
-      // Create separate orders for each shop
-      for (String shopId in itemsByShop.keys) {
-        final shopItems = itemsByShop[shopId] ?? [];
-        if (shopItems.isEmpty) continue;
-
-        try {
-          final shopTotal = cart.getTotalForShop(shopId);
-          final isDelivery = _selectedDeliveryOptions[shopId] == 'delivery';
-          final remarks = _remarksControllers[shopId]?.text ?? '';
-          final shopName = _shopNames[shopId] ?? 'Unknown Shop';
-
-          // Create the order
-          final orderData = Order(
-            id: '',
-            userId: user.uid,
-            items: shopItems,
-            total: shopTotal,
-            isDelivery: isDelivery,
-            shopId: shopId,
-            remarks: remarks,
-            orderDate: Timestamp.now(),
-            status: 'Pending',
-          );
-
-          // Add order to Firestore
-          final orderRef = await FirebaseFirestore.instance
-              .collection('orders')
-              .add(orderData.toMap());
-
-          // Reduce stock quantities
-          final stockReduced = await _inventoryService.reduceStock(
-            shopItems, 
-            orderRef.id
-          );
-
-          if (stockReduced) {
-            successfulOrders.add(shopName);
-          } else {
-            failedOrders.add(shopName);
-            // If stock reduction fails, we should ideally remove the order
-            // but for simplicity, we'll let the shop owner handle it manually
-          }
-
-        } catch (e) {
-          print('Error placing order for shop $shopId: $e');
-          failedOrders.add(_shopNames[shopId] ?? 'Unknown Shop');
-        }
-      }
-
-      if (successfulOrders.isNotEmpty) {
-        // Clear cart after successful orders
-        await cart.clearCart();
-        
-        String message;
-        if (failedOrders.isEmpty) {
-          message = successfulOrders.length == 1 
-            ? 'Order placed successfully!'
-            : '${successfulOrders.length} orders placed successfully!';
-        } else {
-          message = 'Some orders placed successfully. Please check your order history.';
-        }
-        
-        _showSuccessSnackBar(message);
-        Navigator.pop(context, true);
-      } else {
-        _showErrorSnackBar('Failed to place orders. Please try again.');
-      }
-
-    } catch (e) {
-      print('Error placing orders: $e');
-      _showErrorSnackBar('Failed to place orders. Please try again.');
-    } finally {
+  try {
+    // Final stock validation before placing orders
+    final validation = await _inventoryService.validateStock(cart.itemsList);
+    
+    if (!validation['isValid']) {
       setState(() {
         _isPlacingOrders = false;
       });
+      _showStockErrorDialog(validation);
+      return;
     }
+
+    // Get customer name for notification
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    final customerName = userDoc.data()?['name'] ?? 'A customer';
+
+    final itemsByShop = cart.itemsByShop;
+    final List<String> successfulOrders = [];
+    final List<String> failedOrders = [];
+
+    // Create separate orders for each shop
+    for (String shopId in itemsByShop.keys) {
+      final shopItems = itemsByShop[shopId] ?? [];
+      if (shopItems.isEmpty) continue;
+
+      try {
+        final shopTotal = cart.getTotalForShop(shopId);
+        final isDelivery = _selectedDeliveryOptions[shopId] == 'delivery';
+        final remarks = _remarksControllers[shopId]?.text ?? '';
+        final shopName = _shopNames[shopId] ?? 'Unknown Shop';
+
+        // Create the order
+        final orderData = Order(
+          id: '',
+          userId: user.uid,
+          items: shopItems,
+          total: shopTotal,
+          isDelivery: isDelivery,
+          shopId: shopId,
+          remarks: remarks,
+          orderDate: Timestamp.now(),
+          status: 'Pending',
+        );
+
+        // Add order to Firestore
+        final orderRef = await FirebaseFirestore.instance
+            .collection('orders')
+            .add(orderData.toMap());
+
+        // Reduce stock quantities
+        final stockReduced = await _inventoryService.reduceStock(
+          shopItems, 
+          orderRef.id
+        );
+
+        if (stockReduced) {
+          successfulOrders.add(shopName);
+          
+          // 🔔 SEND NOTIFICATION TO SHOP OWNER
+          await OneSignalNotificationSender.notifyShopOwnerOfNewOrder(
+            shopOwnerId: shopId,
+            customerName: customerName,
+            itemCount: shopItems.length,
+            totalAmount: shopTotal,
+            orderId: orderRef.id,
+          );
+          
+          print('✅ Notification sent to shop: $shopName');
+        } else {
+          failedOrders.add(shopName);
+        }
+
+      } catch (e) {
+        print('Error placing order for shop $shopId: $e');
+        failedOrders.add(_shopNames[shopId] ?? 'Unknown Shop');
+      }
+    }
+
+    if (successfulOrders.isNotEmpty) {
+      // Clear cart after successful orders
+      await cart.clearCart();
+      
+      String message;
+      if (failedOrders.isEmpty) {
+        message = successfulOrders.length == 1 
+          ? 'Order placed successfully!'
+          : '${successfulOrders.length} orders placed successfully!';
+      } else {
+        message = 'Some orders placed successfully. Please check your order history.';
+      }
+      
+      _showSuccessSnackBar(message);
+      Navigator.pop(context, true);
+    } else {
+      _showErrorSnackBar('Failed to place orders. Please try again.');
+    }
+
+  } catch (e) {
+    print('Error placing orders: $e');
+    _showErrorSnackBar('Failed to place orders. Please try again.');
+  } finally {
+    setState(() {
+      _isPlacingOrders = false;
+    });
   }
+}
 
   void _showSuccessSnackBar(String message) {
     if (mounted) {

@@ -602,7 +602,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen>
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -1277,7 +1277,7 @@ class _ShopProfileEditScreenState extends State<ShopProfileEditScreen>
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

@@ -58,256 +58,312 @@ class _AdminDashboardState extends State<AdminDashboard>
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // Modern App Bar
-            SliverAppBar(
-              expandedHeight: 120,
-              floating: false,
-              pinned: true,
-              backgroundColor: Colors.white,
-              elevation: 0,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1F2937), Color(0xFF374151)],
-                    ),
-                  ),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('users').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF60A5FA),
                 ),
-                title: FadeTransition(
-                  opacity: _fadeController,
-                  child: const Text(
-                    'Admin Dashboard',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                    ),
-                  ),
+              );
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  style: const TextStyle(color: Color(0xFF1F2937)),
                 ),
-              ),
-              actions: [
-                Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.logout_rounded, color: Colors.white),
-                    onPressed: _logout,
-                  ),
+              );
+            }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No users found.',
+                  style: TextStyle(color: Color(0xFF1F2937)),
                 ),
-              ],
-            ),
-            // Content
-            SliverToBoxAdapter(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(50),
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF6366F1),
-                        ),
-                      ),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('No users found.'));
-                  }
+              );
+            }
 
-                  final allUsers = snapshot.data!.docs;
-                  final int totalUsers = allUsers.length;
-                  final int customerCount = allUsers
-                      .where((doc) => doc['role'] == 'Customer')
-                      .length;
-                  final int shopCount = allUsers
-                      .where((doc) => doc['role'] == 'Shop')
-                      .length;
-                  final int serviceProviderCount = allUsers
-                      .where((doc) => doc['role'] == 'Services')
-                      .length;
-                  final int adminCount = allUsers
-                      .where((doc) => doc['role'] == 'Admin')
-                      .length;
+            final allUsers = snapshot.data!.docs;
+            final int totalUsers = allUsers.length;
+            final int customerCount =
+                allUsers.where((doc) => doc['role'] == 'Customer').length;
+            final int shopCount =
+                allUsers.where((doc) => doc['role'] == 'Shop').length;
+            final int serviceProviderCount =
+                allUsers.where((doc) => doc['role'] == 'Services').length;
 
-                  return FadeTransition(
+            return CustomScrollView(
+              slivers: [
+                // Custom Header
+                SliverToBoxAdapter(
+                  child: FadeTransition(
                     opacity: _fadeController,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Welcome Section
-                          SlideTransition(
-                            position:
-                                Tween<Offset>(
-                                  begin: const Offset(-1, 0),
-                                  end: Offset.zero,
-                                ).animate(
-                                  CurvedAnimation(
-                                    parent: _slideController,
-                                    curve: Curves.easeOutCubic,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF6366F1),
+                                          Color(0xFF8B5CF6),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF6366F1)
+                                              .withOpacity(0.5),
+                                          blurRadius: 20,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.dashboard_rounded,
+                                      color: Colors.white,
+                                      size: 28,
+                                    ),
                                   ),
-                                ),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF6366F1),
-                                    Color(0xFF8B5CF6),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF6366F1,
-                                    ).withOpacity(0.3),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
+                                  const SizedBox(width: 16),
+                                  const Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Admin Panel',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Color(0xFF6B7280),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        'Control Center',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1F2937),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              child: const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Welcome back, Admin!',
-                                    style: TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFE5E7EB),
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Monitor and manage your platform',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white70,
-                                    ),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.power_settings_new_rounded,
+                                    color: Color(0xFFEF4444),
                                   ),
-                                ],
+                                  onPressed: _logout,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFE5E7EB),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 30),
-
-                          // Statistics Grid
-                          SlideTransition(
-                            position:
-                                Tween<Offset>(
-                                  begin: const Offset(0, 0.5),
-                                  end: Offset.zero,
-                                ).animate(
-                                  CurvedAnimation(
-                                    parent: _slideController,
-                                    curve: const Interval(
-                                      0.2,
-                                      1.0,
-                                      curve: Curves.easeOutCubic,
-                                    ),
-                                  ),
-                                ),
-                            child: GridView.count(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                              childAspectRatio: 1.8,
+                            child: Row(
                               children: [
-                                _buildStatCard(
-                                  title: 'Total Users',
-                                  count: totalUsers,
-                                  icon: Icons.group_rounded,
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF3B82F6),
-                                      Color(0xFF1D4ED8),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.verified_user_rounded,
+                                    color: Color(0xFF3B82F6),
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome Back, Administrator',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1F2937),
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'All systems operational',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF6B7280),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
-                                _buildStatCard(
-                                  title: 'Customers',
-                                  count: customerCount,
-                                  icon: Icons.people_outline_rounded,
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF10B981),
-                                      Color(0xFF059669),
-                                    ],
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
-                                ),
-                                _buildStatCard(
-                                  title: 'Shops',
-                                  count: shopCount,
-                                  icon: Icons.storefront_rounded,
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFFF59E0B),
-                                      Color(0xFFD97706),
-                                    ],
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981)
+                                        .withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                ),
-                                _buildStatCard(
-                                  title: 'Services',
-                                  count: serviceProviderCount,
-                                  icon: Icons.business_center_rounded,
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFF06B6D4),
-                                      Color(0xFF0891B2),
-                                    ],
+                                  child: const Text(
+                                    'ACTIVE',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF10B981),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 30),
-
-                          // Quick Actions
-                          SlideTransition(
-                            position:
-                                Tween<Offset>(
-                                  begin: const Offset(0, 0.5),
-                                  end: Offset.zero,
-                                ).animate(
-                                  CurvedAnimation(
-                                    parent: _slideController,
-                                    curve: const Interval(
-                                      0.4,
-                                      1.0,
-                                      curve: Curves.easeOutCubic,
-                                    ),
-                                  ),
-                                ),
-                            child: _buildQuickActions(context),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Statistics
+                SliverToBoxAdapter(
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.3),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: _slideController,
+                        curve: const Interval(0.2, 1.0,
+                            curve: Curves.easeOutCubic),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Platform Statistics',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 1.3,
+                            children: [
+                              _buildStatCard(
+                                title: 'Total Users',
+                                count: totalUsers,
+                                icon: Icons.people_rounded,
+                                iconColor: const Color(0xFF60A5FA),
+                                numberColor: const Color(0xFF60A5FA),
+                              ),
+                              _buildStatCard(
+                                title: 'Customers',
+                                count: customerCount,
+                                icon: Icons.person_outline_rounded,
+                                iconColor: const Color(0xFF34D399),
+                                numberColor: const Color(0xFF34D399),
+                              ),
+                              _buildStatCard(
+                                title: 'Shops',
+                                count: shopCount,
+                                icon: Icons.store_rounded,
+                                iconColor: const Color(0xFFFBBF24),
+                                numberColor: const Color(0xFFFBBF24),
+                              ),
+                              _buildStatCard(
+                                title: 'Services',
+                                count: serviceProviderCount,
+                                icon: Icons.work_outline_rounded,
+                                iconColor: const Color(0xFFA78BFA),
+                                numberColor: const Color(0xFFA78BFA),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-          ],
+                  ),
+                ),
+                // Quick Actions
+                SliverToBoxAdapter(
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.3),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: _slideController,
+                        curve: const Interval(0.4, 1.0,
+                            curve: Curves.easeOutCubic),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Quick Actions',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildQuickActions(context),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -317,52 +373,68 @@ class _AdminDashboardState extends State<AdminDashboard>
     required String title,
     required int count,
     required IconData icon,
-    required LinearGradient gradient,
+    required Color iconColor,
+    required Color numberColor,
   }) {
     return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: gradient,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+        ),
         boxShadow: [
           BoxShadow(
-            color: gradient.colors.first.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      count.toString(),
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: numberColor,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Icon(icon, color: Colors.white, size: 20),
-            ),
-            const Spacer(),
-            Text(
-              count.toString(),
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 24),
               ),
-            ),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.white70,
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -371,109 +443,109 @@ class _AdminDashboardState extends State<AdminDashboard>
     final actions = [
       {
         'title': 'Manage Users',
-        'subtitle': 'View and control user accounts',
+        'subtitle': 'View and control accounts',
         'icon': Icons.manage_accounts_rounded,
-        'color': const Color(0xFF6366F1),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
-        ),
+        'iconColor': const Color(0xFF6366F1),
       },
       {
         'title': 'User Locations',
-        'subtitle': 'Explore where users are located',
-        'icon': Icons.location_on,
-        'color': const Color(0xFF3B82F6),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AdminUserLocationDashboard(),
-          ),
-        ),
+        'subtitle': 'Track user distribution',
+        'icon': Icons.location_on_rounded,
+        'iconColor': const Color(0xFF3B82F6),
       },
       {
         'title': 'Bookings',
-        'subtitle': 'Monitor all service bookings',
-        'icon': Icons.calendar_today_rounded,
-        'color': const Color(0xFF8B5CF6),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AdminBookingManagementScreen(),
-          ),
-        ),
+        'subtitle': 'Service appointments',
+        'icon': Icons.event_available_rounded,
+        'iconColor': const Color(0xFF10B981),
       },
       {
         'title': 'Orders',
-        'subtitle': 'Track product orders',
-        'icon': Icons.shopping_cart_rounded,
-        'color': const Color(0xFF06B6D4),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AdminOrderManagementScreen(),
-          ),
-        ),
+        'subtitle': 'Product transactions',
+        'icon': Icons.shopping_bag_rounded,
+        'iconColor': const Color(0xFFF59E0B),
       },
       {
         'title': 'Analytics',
-        'subtitle': 'View reports and insights',
-        'icon': Icons.analytics_rounded,
-        'color': const Color(0xFF3B82F6),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AnalyticsDashboard()),
-        ),
+        'subtitle': 'Performance insights',
+        'icon': Icons.trending_up_rounded,
+        'iconColor': const Color(0xFFEC4899),
       },
       {
         'title': 'Notifications',
-        'subtitle': 'Send updates to users',
-        'icon': Icons.notifications_active_rounded,
-        'color': const Color(0xFF10B981),
-        'onTap': () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AdminNotificationScreen(),
-          ),
-        ),
+        'subtitle': 'Broadcast messages',
+        'icon': Icons.campaign_rounded,
+        'iconColor': const Color(0xFF06B6D4),
       },
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
-          ),
+    final routes = [
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const UserManagementScreen()),
+      ),
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AdminUserLocationDashboard(),
         ),
-        const SizedBox(height: 16),
-        ...actions.map((action) => _buildActionCard(action)),
-      ],
+      ),
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AdminBookingManagementScreen(),
+        ),
+      ),
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AdminOrderManagementScreen(),
+        ),
+      ),
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AnalyticsDashboard()),
+      ),
+      () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AdminNotificationScreen(),
+        ),
+      ),
+    ];
+
+    return Column(
+      children: List.generate(
+        actions.length,
+        (index) => _buildActionCard(actions[index], routes[index]),
+      ),
     );
   }
 
-  Widget _buildActionCard(Map<String, dynamic> action) {
+  Widget _buildActionCard(Map<String, dynamic> action, VoidCallback onTap) {
+    final Color iconColor = action['iconColor'] as Color;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: action['onTap'],
+          onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -482,10 +554,10 @@ class _AdminDashboardState extends State<AdminDashboard>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: action['color'].withOpacity(0.1),
+                    color: iconColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(action['icon'], color: action['color'], size: 24),
+                  child: Icon(action['icon'], color: iconColor, size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -504,7 +576,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                       Text(
                         action['subtitle'],
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           color: Color(0xFF6B7280),
                         ),
                       ),
@@ -513,7 +585,7 @@ class _AdminDashboardState extends State<AdminDashboard>
                 ),
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: action['color'],
+                  color: iconColor,
                   size: 16,
                 ),
               ],

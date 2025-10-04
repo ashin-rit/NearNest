@@ -7,6 +7,7 @@ import 'package:nearnest/models/booking_model.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:nearnest/services/one_signal_notification_sender.dart';
 
 class ServiceProviderBookingsScreen extends StatefulWidget {
   const ServiceProviderBookingsScreen({super.key});
@@ -74,35 +75,69 @@ class _ServiceProviderBookingsScreenState
     super.dispose();
   }
 
-  Future<void> _updateBookingStatus(
-    String bookingId,
-    String newStatus, {
-    String? cancellationReason,
-    String? remarks,
-  }) async {
-    try {
-      final updateData = <String, dynamic>{'status': newStatus};
-      if (remarks != null) {
-        updateData['remarks'] = remarks;
-      }
-      if (cancellationReason != null) {
-        updateData['cancellationReason'] = cancellationReason;
-      }
+Future<void> _updateBookingStatus(
+  String bookingId,
+  String newStatus, {
+  String? cancellationReason,
+  String? remarks,
+}) async {
+  try {
+    final updateData = <String, dynamic>{'status': newStatus};
+    if (remarks != null) {
+      updateData['remarks'] = remarks;
+    }
+    if (cancellationReason != null) {
+      updateData['cancellationReason'] = cancellationReason;
+    }
 
-      await FirebaseFirestore.instance
+    // Update booking in Firestore
+    await FirebaseFirestore.instance
+        .collection('bookings')
+        .doc(bookingId)
+        .update(updateData);
+
+    // 🔔 SEND NOTIFICATION TO CUSTOMER
+    try {
+      // Get service provider name
+      final providerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .get();
+      final providerName = providerDoc.data()?['name'] ?? 'Your service provider';
+
+      // Get customer ID and service name from booking
+      final bookingDoc = await FirebaseFirestore.instance
           .collection('bookings')
           .doc(bookingId)
-          .update(updateData);
+          .get();
+      final bookingData = bookingDoc.data();
+      final customerId = bookingData?['userId'];
+      final serviceName = bookingData?['serviceName'] ?? 'service';
 
-      _showSnackBar(
-        'Booking status updated to $newStatus!',
-        _statusColors[newStatus] ?? Colors.blue,
-      );
+      if (customerId != null) {
+        await OneSignalNotificationSender.notifyCustomerBookingStatusChange(
+          customerId: customerId,
+          bookingId: bookingId,
+          newStatus: newStatus,
+          serviceProviderName: providerName,
+          serviceName: serviceName,
+          remarks: newStatus.toLowerCase() == 'canceled' ? cancellationReason : remarks,
+        );
+        print('✅ Customer notified of booking status change');
+      }
     } catch (e) {
-      _showSnackBar('Failed to update booking status: $e', Colors.red);
+      print('❌ Error sending notification to customer: $e');
+      // Don't block the UI if notification fails
     }
-  }
 
+    _showSnackBar(
+      'Booking status updated to $newStatus!',
+      _statusColors[newStatus] ?? Colors.blue,
+    );
+  } catch (e) {
+    _showSnackBar('Failed to update booking status: $e', Colors.red);
+  }
+}
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -915,7 +950,15 @@ class _ServiceProviderBookingsScreenState
           'My Bookings',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF4F46E5),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0EA5E9), Color(0xFF38BDF8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(

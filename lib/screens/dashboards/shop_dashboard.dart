@@ -16,7 +16,8 @@ class ShopDashboard extends StatefulWidget {
   State<ShopDashboard> createState() => _ShopDashboardState();
 }
 
-class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateMixin {
+class _ShopDashboardState extends State<ShopDashboard>
+    with TickerProviderStateMixin {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AuthService _authService = AuthService();
   DocumentSnapshot? _shopData;
@@ -27,8 +28,14 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
-    _slideController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
     _fetchShopData();
   }
 
@@ -59,7 +66,9 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
             content: const Text('Failed to load shop data.'),
             backgroundColor: Colors.red.shade400,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -176,7 +185,8 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
     final String city = data['city'] ?? 'N/A';
     final String state = data['state'] ?? 'N/A';
     final String pincode = data['pincode'] ?? 'N/A';
-    final String description = data['description'] ?? 'No description provided.';
+    final String description =
+        data['description'] ?? 'No description provided.';
     final String category = data['category'] ?? 'N/A';
     final String business_hours = data['business_hours'] ?? 'N/A';
     final bool isDeliveryAvailable = data['isDeliveryAvailable'] ?? false;
@@ -234,13 +244,16 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
                 FadeTransition(
                   opacity: _fadeController,
                   child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.3),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: _slideController,
-                      curve: Curves.easeOutCubic,
-                    )),
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(0, 0.3),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: _slideController,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -250,7 +263,14 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
                         const SizedBox(height: 32),
                         _buildBusinessDetails(data),
                         const SizedBox(height: 24),
-                        _buildContactInfo(email, phone, streetAddress, city, state, pincode),
+                        _buildContactInfo(
+                          email,
+                          phone,
+                          streetAddress,
+                          city,
+                          state,
+                          pincode,
+                        ),
                       ],
                     ),
                   ),
@@ -270,7 +290,7 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -351,7 +371,13 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
                             userId: _auth.currentUser!.uid,
                             initialData: {
                               ..._shopData!.data() as Map<String, dynamic>,
-                              'isDeliveryAvailable': (_shopData!.data() as Map<String, dynamic>)['isDeliveryAvailable'] ?? false,
+                              'isDeliveryAvailable':
+                                  (_shopData!.data()
+                                      as Map<
+                                        String,
+                                        dynamic
+                                      >)['isDeliveryAvailable'] ??
+                                  false,
                             },
                           ),
                         ),
@@ -427,7 +453,13 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
     );
   }
 
-  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap, {bool isWide = false}) {
+  Widget _buildActionCard(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap, {
+    bool isWide = false,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -507,21 +539,45 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
       const Color(0xFF6366F1),
       [
         _buildInfoRow(Icons.business_rounded, 'Name', data['name'] ?? 'N/A'),
-        _buildInfoRow(Icons.category_rounded, 'Category', data['category'] ?? 'N/A'),
-        _buildInfoRow(Icons.access_time_rounded, 'Hours', data['business_hours'] ?? 'N/A'),
+        _buildInfoRow(
+          Icons.category_rounded,
+          'Category',
+          data['category'] ?? 'N/A',
+        ),
+        _buildInfoRow(
+          Icons.access_time_rounded,
+          'Hours',
+          data['business_hours'] ?? 'N/A',
+        ),
         _buildInfoRow(
           Icons.local_shipping_rounded,
           'Delivery',
-          (data['isDeliveryAvailable'] ?? false) ? 'Available' : 'Not Available',
-          valueColor: (data['isDeliveryAvailable'] ?? false) ? Colors.green : Colors.orange,
+          (data['isDeliveryAvailable'] ?? false)
+              ? 'Available'
+              : 'Not Available',
+          valueColor: (data['isDeliveryAvailable'] ?? false)
+              ? Colors.green
+              : Colors.orange,
         ),
         if (data['description'] != null && data['description'].isNotEmpty)
-          _buildInfoRow(Icons.description_rounded, 'Description', data['description'], isMultiLine: true),
+          _buildInfoRow(
+            Icons.description_rounded,
+            'Description',
+            data['description'],
+            isMultiLine: true,
+          ),
       ],
     );
   }
 
-  Widget _buildContactInfo(String email, String phone, String streetAddress, String city, String state, String pincode) {
+  Widget _buildContactInfo(
+    String email,
+    String phone,
+    String streetAddress,
+    String city,
+    String state,
+    String pincode,
+  ) {
     return _buildInfoCard(
       'Contact Details',
       Icons.contact_mail_rounded,
@@ -529,13 +585,23 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
       [
         _buildInfoRow(Icons.email_rounded, 'Email', email),
         _buildInfoRow(Icons.phone_rounded, 'Phone', phone),
-        _buildInfoRow(Icons.location_on_rounded, 'Address', '$streetAddress, $city', isMultiLine: true),
+        _buildInfoRow(
+          Icons.location_on_rounded,
+          'Address',
+          '$streetAddress, $city',
+          isMultiLine: true,
+        ),
         _buildInfoRow(Icons.map_rounded, 'Location', '$state - $pincode'),
       ],
     );
   }
 
-  Widget _buildInfoCard(String title, IconData titleIcon, Color accentColor, List<Widget> children) {
+  Widget _buildInfoCard(
+    String title,
+    IconData titleIcon,
+    Color accentColor,
+    List<Widget> children,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -592,7 +658,9 @@ class _ShopDashboardState extends State<ShopDashboard> with TickerProviderStateM
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        crossAxisAlignment: isMultiLine ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment: isMultiLine
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(6),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:nearnest/services/one_signal_notification_sender.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ShopOrderManagementScreen extends StatefulWidget {
   final String shopId;
@@ -469,9 +471,15 @@ class _ShopOrderManagementScreenState extends State<ShopOrderManagementScreen>
       appBar: AppBar(
         title: const Text(
           'Order Management',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF6D28D9), Color(0xFF8B5CF6)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
           ),
         ),
         backgroundColor: Colors.white,
@@ -490,7 +498,7 @@ class _ShopOrderManagementScreenState extends State<ShopOrderManagementScreen>
                 _sortAscending
                     ? Icons.arrow_upward_rounded
                     : Icons.arrow_downward_rounded,
-                color: const Color(0xFF6366F1),
+                color: const Color.fromARGB(255, 255, 255, 255),
               ),
               onPressed: () {
                 setState(() {
@@ -1209,54 +1217,85 @@ class _ShopOrderManagementScreenState extends State<ShopOrderManagementScreen>
     );
   }
 
-  Future<void> _updateOrderStatus(
-    String orderId,
-    String newStatus, {
-    String? remarks,
-    String? cancelReason,
-  }) async {
-    try {
-      final updateData = <String, dynamic>{'status': newStatus};
-      if (remarks != null) {
-        updateData['remarks'] = remarks;
-      }
-      if (cancelReason != null) {
-        updateData['cancelReason'] = cancelReason;
-      }
+Future<void> _updateOrderStatus(
+  String orderId,
+  String newStatus, {
+  String? remarks,
+  String? cancelReason,
+}) async {
+  try {
+    final updateData = <String, dynamic>{'status': newStatus};
+    if (remarks != null) {
+      updateData['remarks'] = remarks;
+    }
+    if (cancelReason != null) {
+      updateData['cancelReason'] = cancelReason;
+    }
 
-      await FirebaseFirestore.instance
+    // Update order in Firestore
+    await FirebaseFirestore.instance
+        .collection('orders')
+        .doc(orderId)
+        .update(updateData);
+
+    // 🔔 SEND NOTIFICATION TO CUSTOMER
+    try {
+      // Get shop name
+      final shopDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.shopId)
+          .get();
+      final shopName = shopDoc.data()?['name'] ?? 'Your shop';
+
+      // Get customer ID from order
+      final orderDoc = await FirebaseFirestore.instance
           .collection('orders')
           .doc(orderId)
-          .update(updateData);
+          .get();
+      final customerId = orderDoc.data()?['userId'];
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Order status updated to $newStatus!'),
-            backgroundColor: const Color(0xFF10B981),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+      if (customerId != null) {
+        await OneSignalNotificationSender.notifyCustomerOrderStatusChange(
+          customerId: customerId,
+          orderId: orderId,
+          newStatus: newStatus,
+          shopName: shopName,
+          remarks: newStatus.toLowerCase() == 'canceled' ? cancelReason : remarks,
         );
+        print('✅ Customer notified of order status change');
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update order status: $e'),
-            backgroundColor: Colors.red.shade400,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+      print('❌ Error sending notification to customer: $e');
+      // Don't block the UI if notification fails
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Order status updated to $newStatus!'),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        );
-      }
+        ),
+      );
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update order status: $e'),
+          backgroundColor: Colors.red.shade400,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
     }
   }
-
+}
   void _showOrderActionDialog(
     BuildContext context,
     String orderId,
